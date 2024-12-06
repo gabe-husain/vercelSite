@@ -1,4 +1,4 @@
-# Your Next.js Portfolio
+# Gabriel's Vercel website
 
 ## Getting Started
 
@@ -16,7 +16,8 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ```
 ├── src/
-│   ├── app/                    # App router directory
+│   ├── app/                   # App router directory
+│   ├── pages                  # Pages directory
 │   ├── components/            # Reusable components
 │   ├── lib/                   # Utility functions
 │   ├── types/                 # TypeScript types
