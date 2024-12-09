@@ -5,23 +5,36 @@
   "main": "next.config.js",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
+    "build": "npm run optimize-images && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "optimize-images": "tsx scripts/optimize-images.ts",
+    "analyze": "ANALYZE=true next build"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "next": "^15.0.3",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
     "@types/node": "22.10.1",
     "@types/react": "18.3.12",
+    "@vercel/analytics": "^1.4.1",
+    "@vercel/speed-insights": "^1.1.0",
+    "geist": "^1.3.1",
+    "next": "^15.0.4-canary.47",
+    "next-axiom": "^1.7.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "typescript": "5.7.2"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^15.0.4",
     "@types/node": "22.10.1",
     "@types/react": "18.3.12",
+    "autoprefixer": "^10.4.20",
+    "eslint-config-next": "^15.0.4",
+    "postcss": "^8.4.49",
+    "sharp": "^0.33.5",
+    "tailwindcss": "^3.4.16",
     "typescript": "5.7.2"
   }
 }

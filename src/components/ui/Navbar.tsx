@@ -1,21 +1,38 @@
+import Image from 'next/image'
+import Link from 'next/link'
+import '../../app/globals.css'
+
 export default function Navbar() {
-    const links = ['Blog', 'About'];
-    const nav = links.map(
-        (link) => 
-            (<div key={link} className="element">{link}</div>)
-    )
+    const links = ['Blog', 'About']
+    
+    const nav = links.map((link) => (
+        <div key={link} className="navItem">
+            {link}
+        </div>
+    ))
     
     return (
-        <nav className="navbar" style={{ display: "flex", gap: "3vw"}}>
-            <a href="/" className="Homepage" >
-                <img src="https://m.media-amazon.com/images/I/61bRfnGfJTL._AC_UF894,1000_QL80_.jpg" 
-                className="home image" 
-                style={{ height: "10vw", width: "10vh", objectFit: "contain" }} 
-                alt="homepage"/>
-            </a>
-            <div className="links" style={{ display: "flex", gap: "3vw"}}>
-                { nav }
+        <nav className="Navbar flex" >
+            
+            <Link href="/" className="navbar-logo-container">
+                <picture>
+                    <source
+                        srcSet="/images/Dark-Mode-Logo.svg"
+                        media="(prefers-color-scheme: dark)"
+                    />
+                    <Image
+                        src="/images/Light-Mode-Logo.svg"
+                        fill
+                        className="Logo"
+                        alt="homepage logo"
+                        priority
+                        sizes="(max-width: 768px) 80px, 120px"
+                    />
+                </picture>
+            </Link>
+            <div className="siteMap" style={{ display : "flex" }} >
+                {nav}
             </div>
         </nav>
-    );
+    )
 }
