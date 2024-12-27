@@ -11,7 +11,7 @@ export default function Navbar() {
     ]
     
     return (
-        <nav className="Navbar flex" >
+        <nav className="Navbar navbar-items" >
             
             <Link href="/" className="navbar-logo-container">
                 <picture>
@@ -29,7 +29,7 @@ export default function Navbar() {
                     />
                 </picture>
             </Link>
-            <div className="Navbar" style={{ display : "flex" }} >
+            <div className="navbar-items" style={{ display : "flex" }} >
                 {pages.map((page) => (
                     <Link key={page.page} href={{ pathname : page.href }} className="navItem" >
                         {page.page}

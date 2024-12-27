@@ -1,0 +1,7 @@
+.TextPage {
+    padding: clamp(.5rem, 5vw, 2rem);
+    --padding-leftright: clamp(.5rem, 15vw, 20rem);
+    padding-left: var(--padding-leftright);
+    padding-right: var(--padding-leftright);
+    display: flex;
+}
