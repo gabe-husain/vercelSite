@@ -3,13 +3,12 @@ import Link from 'next/link'
 import '../../app/globals.css'
 
 export default function Navbar() {
-    const links = ['Blog', 'About']
-    
-    const nav = links.map((link) => (
-        <div key={link} className="navItem">
-            {link}
-        </div>
-    ))
+    const pages = [
+        {page: 'Blog', href: '/Blog'}, 
+        {page: 'About', href: '/About'},
+        {page: 'Contact', href: '/Contact'},
+        {page: 'myInv', href: '/myInv'},
+    ]
     
     return (
         <nav className="Navbar flex" >
@@ -30,9 +29,14 @@ export default function Navbar() {
                     />
                 </picture>
             </Link>
-            <div className="siteMap" style={{ display : "flex" }} >
-                {nav}
+            <div className="Navbar" style={{ display : "flex" }} >
+                {pages.map((page) => (
+                    <Link key={page.page} href={page.href} className="navItem" >
+                        {page.page}
+                    </Link>
+                ))} 
             </div>
+            <div></div>
         </nav>
     )
 }
