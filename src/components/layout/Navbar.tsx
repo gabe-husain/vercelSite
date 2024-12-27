@@ -4,9 +4,9 @@ import '../../app/globals.css'
 
 export default function Navbar() {
     const pages = [
-        {page: 'Blog', href: '/Blog'}, 
-        {page: 'About', href: '/About'},
-        {page: 'Contact', href: '/Contact'},
+        {page: 'Blog', href: '/blog'}, 
+        {page: 'About', href: '/about'},
+        {page: 'Contact', href: '/contact'},
         {page: 'myInv', href: '/myInv'},
     ]
     
@@ -31,7 +31,7 @@ export default function Navbar() {
             </Link>
             <div className="Navbar" style={{ display : "flex" }} >
                 {pages.map((page) => (
-                    <Link key={page.page} href={page.href} className="navItem" >
+                    <Link key={page.page} href={{ pathname : page.href }} className="navItem" >
                         {page.page}
                     </Link>
                 ))} 

@@ -29,7 +29,10 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: clamp(0.5rem, 2vw, 2rem);
+    padding: clamp(0.5rem, 20vw, 2rem);
+    --navbar-padding-leftright: clamp(.5rem, 8vw, 20rem);
+    padding-left: var(--navbar-padding-leftright);
+    padding-right: var(--navbar-padding-leftright);
     width: 100%;
     max-width: 1440px;
     margin: 0 auto;
