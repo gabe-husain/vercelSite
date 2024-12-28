@@ -3,7 +3,10 @@ import TextPage from "../components/layout/Textpage";
 export default function Home() {
   return (
     <TextPage>
-      <h1 className="text-4xl font-bold">Welcome to My Portfolio</h1>
+      <title>Welcome to Gabriel's Website</title>
+
+      <h1>There's not much here. Not even a couple pages.</h1>
+
     </TextPage>
   )
 }
