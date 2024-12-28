@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import "../../app/globals.css";
+import "@/src/app/globals.css";
 
 export default function Navbar() {
   const pages = [

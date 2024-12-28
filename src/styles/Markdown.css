@@ -1,0 +1,53 @@
+.base {
+    padding: clamp(0.5rem, 5vw, 2rem);
+    --padding-leftright: clamp(0.5rem, 15vw, 20rem);
+    padding-left: var(--padding-leftright);
+    padding-right: var(--padding-leftright);
+}
+
+h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+h5 {
+    font-size: 0.875rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  color: var(--text-light);
+}
+
+@media (prefers-color-scheme: dark) {
+  .markdown h1,
+  .markdown h2,
+  .markdown h3,
+  .markdown h4,
+  .markdown h5,
+  .markdown h6 {
+    color: var(--text-dark);
+  }
+}
