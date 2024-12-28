@@ -1,53 +1,53 @@
-import withBundleAnalyzer from '@next/bundle-analyzer'
+import withBundleAnalyzer from "@next/bundle-analyzer";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  output: 'standalone',
-  
+  output: "standalone",
+
   images: {
-    formats: ['image/avif', 'image/webp'],
+    formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
     minimumCacheTTL: 60 * 60 * 24 * 365,
     unoptimized: false,
   },
-  
+
   async headers() {
     return [
       {
-        source: '/:all*(svg|jpg|png|webp|avif)',
+        source: "/:all*(svg|jpg|png|webp|avif)",
         locale: false,
         headers: [
           {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, stale-while-revalidate=31536000',
+            key: "Cache-Control",
+            value: "public, max-age=31536000, stale-while-revalidate=31536000",
           },
           {
-            key: 'Vary',
-            value: 'Accept',
+            key: "Vary",
+            value: "Accept",
           },
         ],
       },
       {
-        source: '/fonts/:path*',
+        source: "/fonts/:path*",
         headers: [
           {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
           },
         ],
       },
       {
-        source: '/_next/static/:path*',
+        source: "/_next/static/:path*",
         headers: [
           {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
           },
         ],
       },
-    ]
+    ];
   },
 
   webpack: (config, { dev, isServer }) => {
@@ -55,26 +55,26 @@ const nextConfig = {
       // Inline small assets
       config.module.rules.push({
         test: /\.(png|jpg|gif|webp|avif|woff2)$/,
-        type: 'asset',
+        type: "asset",
         parser: {
           dataUrlCondition: {
             maxSize: 8 * 1024, // 8kb
           },
         },
-      })
+      });
 
       // Optimize SVGs
       config.module.rules.push({
         test: /\.svg$/,
         use: [
           {
-            loader: '@svgr/webpack',
+            loader: "@svgr/webpack",
             options: {
               svgo: true,
               svgoConfig: {
                 plugins: [
                   {
-                    name: 'preset-default',
+                    name: "preset-default",
                     params: {
                       overrides: {
                         removeViewBox: false,
@@ -86,11 +86,11 @@ const nextConfig = {
             },
           },
         ],
-      })
+      });
 
       // Configure code splitting
       config.optimization.splitChunks = {
-        chunks: 'all',
+        chunks: "all",
         minSize: 20000,
         maxSize: 244000,
         minChunks: 1,
@@ -100,31 +100,31 @@ const nextConfig = {
           default: false,
           vendors: false,
           commons: {
-            name: 'commons',
-            chunks: 'initial',
+            name: "commons",
+            chunks: "initial",
             minChunks: 2,
             priority: 10,
           },
           lib: {
             test(module) {
-              return module.size() > 160000
+              return module.size() > 160000;
             },
             name(module) {
-              return `lib-${module.libIdent({ context: process.cwd() })}`
+              return `lib-${module.libIdent({ context: process.cwd() })}`;
             },
-            chunks: 'all',
+            chunks: "all",
             priority: 30,
             minChunks: 1,
             reuseExistingChunk: true,
           },
         },
-      }
+      };
     }
 
-    return config
+    return config;
   },
-}
+};
 
 export default withBundleAnalyzer({
-  enabled: process.env.ANALYZE === 'true',
-})(nextConfig)
+  enabled: process.env.ANALYZE === "true",
+})(nextConfig);

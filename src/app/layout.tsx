@@ -1,8 +1,8 @@
-import { Suspense } from 'react'
-import { Analytics } from '@vercel/analytics/react'
-import { SpeedInsights } from '@vercel/speed-insights/next'
-import { GeistSans } from 'geist/font'
-import Navbar from '../components/layout/Navbar'
+import { Suspense } from "react";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { GeistSans } from "geist/font";
+import Navbar from "../components/layout/Navbar";
 
 // Advanced preload component
 const Preload = () => {
@@ -13,8 +13,8 @@ const Preload = () => {
       {/* DNS prefetch for secondary resources */}
       <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
     </>
-  )
-}
+  );
+};
 
 // Placeholder loading component with FLIP animation
 const Loading = () => (
@@ -29,12 +29,12 @@ const Loading = () => (
       </div>
     </div>
   </div>
-)
+);
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en" className={GeistSans.className}>
@@ -47,13 +47,11 @@ export default function RootLayout({
       <body className="min-h-screen flex flex-col">
         <Navbar />
         <main className="flex-grow">
-          <Suspense fallback={<Loading />}>
-            {children}
-          </Suspense>
+          <Suspense fallback={<Loading />}>{children}</Suspense>
         </main>
         <Analytics />
         <SpeedInsights />
       </body>
     </html>
-  )
+  );
 }

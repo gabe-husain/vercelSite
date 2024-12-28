@@ -1,0 +1,5 @@
+{
+  "plugins": ["prettier"],
+  "singleQuote": false,
+  "jsxSingleQuote": false
+}
