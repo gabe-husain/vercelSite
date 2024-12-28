@@ -5,3 +5,15 @@
     padding-right: var(--padding-leftright);
     display: flex;
 }
+
+.title {
+    font-size: clamp(1.5rem, 5vw, 3rem);
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.textBody {
+    font-size: clamp(1rem, 2vw, 1.5rem);
+    line-height: 1.5;
+    margin-bottom: 2rem;
+}

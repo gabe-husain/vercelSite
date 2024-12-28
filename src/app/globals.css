@@ -21,12 +21,17 @@ body {
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+.multiline
+{
+   white-space: pre-wrap;
+}
+
 /* -----------------------------
    Navbar Styles
    Keep grouped for easy future extraction
    ----------------------------- */
 .Navbar {
-    border-bottom: 1px solid rgba(255,255,255,.25);
+    border-bottom: 1px solid var(--text-light);
 }
 .navbar-items {
     display: flex;
@@ -75,5 +80,8 @@ body {
     body {
         background-color: var(--background-dark);
         color: var(--text-dark);
+    }
+    .Navbar {
+        border-bottom: 1px solid var(--text-dark);
     }
 }
