@@ -8,36 +8,73 @@
 h1 {
     font-size: 2rem;
     font-weight: 700;
-    margin-bottom: 1rem;
+    margin-top: 1rem;
 }
 
 h2 {
     font-size: 1.5rem;
     font-weight: 700;
-    margin-bottom: 1rem;
+    margin-top: 1rem;
 }
 h3 {
     font-size: 1.25rem;
     font-weight: 700;
-    margin-bottom: 1rem;
+    margin-top: 1rem;
 }
 h4 {
     font-size: 1rem;
     font-weight: 700;
-    margin-bottom: 1rem;
+    margin-top: 1rem;
 }
 h5 {
     font-size: 0.875rem;
     font-weight: 700;
-    margin-bottom: 1rem;
+    margin-top: 1rem;
 }
+
+/*
+
+Lists, unordered and ordered hehe.
+
+*/
+
+ul, ol {
+    margin-left: 2rem;
+    margin-bottom: 1rem;
+    line-height: 1.6;
+ }
+ 
+ ul {
+    list-style: disc;
+ }
+ 
+ ol {
+    list-style: decimal;
+ }
+ 
+ li {
+    padding: 0.25rem 0;
+ }
+ 
+ /* Nested lists */
+ ul ul, ol ol {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+ }
+
+/*
+
+some markdown type shit. we got to set it as light and dark stuff
+
+*/
 
 .markdown h1,
 .markdown h2,
 .markdown h3,
 .markdown h4,
 .markdown h5,
-.markdown h6 {
+.markdown h6,
+.markdown p {
   color: var(--text-light);
 }
 
@@ -47,7 +84,8 @@ h5 {
   .markdown h3,
   .markdown h4,
   .markdown h5,
-  .markdown h6 {
+  .markdown h6,
+  .markdown p {
     color: var(--text-dark);
   }
 }

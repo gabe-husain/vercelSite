@@ -1,10 +1,13 @@
-// src/app/components/RecentPosts.tsx
 import { PropsWithChildren } from "react";
 import Link from 'next/link';
 import { getPosts } from '@/src/lib/posts';
 
-export default async function RecentPosts({ children }: PropsWithChildren) {
-  const posts = await getPosts();
+interface RecentPostsProps extends PropsWithChildren {
+  type: 'posts' | 'recipes';
+}
+
+export default async function RecentPosts({ children, type }: RecentPostsProps) {
+  const posts = await getPosts(type);
   const recentPosts = posts.slice(0, 5);
 
   return (
@@ -13,7 +16,7 @@ export default async function RecentPosts({ children }: PropsWithChildren) {
       <div className="recent-posts-list">
         {recentPosts.map((post) => (
           <Link 
-            href={`/blog/posts/${post.slug}`} 
+            href={`/blog/${post.type}/${post.slug}`} 
             key={post.slug}
             className="post-link"
           >

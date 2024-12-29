@@ -11,7 +11,7 @@ interface PageProps {
 export default async function PostPage({ params }: PageProps) {
   const { slug } = await params;
   
-  const posts = await getPosts('posts'); 
+  const posts = await getPosts('recipes'); 
   const post = posts.find(p => p.slug === slug);
 
   if (!post) {

@@ -1,5 +1,6 @@
 import TextPage from "@/src/components/layout/Textpage";
 import RecentPosts from "@/src/components/automation/RecentPosts";
+import "@/src/styles/Blog.css";
 
 export default function Blog() {
   return (
@@ -13,11 +14,16 @@ export default function Blog() {
           Here is where i write the shit thats on my mind. treasure trove of
           things and shit I guess.
         </p>
-        <h2 className="subtitle">
-          Recent Posts
-        </h2>
+        
 
-        <RecentPosts />
+        <div className="recent-posts-container">
+          <RecentPosts type="posts">
+            <h2 className="subtitle">Recent Posts</h2>
+          </RecentPosts>
+          <RecentPosts type="recipes">
+            <h2 className="subtitle">Recent Recipes</h2>
+          </RecentPosts>
+        </div>
 
       </div>
     </TextPage>

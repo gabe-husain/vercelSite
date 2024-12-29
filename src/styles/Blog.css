@@ -1,0 +1,9 @@
+.recent-posts-container {
+    display: flex;
+    gap: 1rem;
+    width: 100%;
+  }
+  
+  .recent-posts-container > * {
+    flex: 1;
+  }
