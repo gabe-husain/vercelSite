@@ -5,6 +5,19 @@
     padding-right: var(--padding-leftright);
 }
 
+/*
+
+Making this legible at the very least
+Some Basic Typography and CSS
+
+*/
+
+p {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+
 h1 {
     font-size: 2rem;
     font-weight: 700;
