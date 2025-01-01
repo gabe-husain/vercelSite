@@ -1,6 +1,7 @@
 import TextPage from "@/src/components/layout/Textpage";
 import RecentPosts from "@/src/components/automation/RecentPosts";
 import "@/src/styles/Blog.css";
+import "@/src/styles/Markdown.css";
 
 export default function Blog() {
   return (
