@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { GeistSans } from "geist/font";
 import Navbar from "../components/layout/Navbar";
 
 // Advanced preload component
@@ -37,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={GeistSans.className}>
+    <html lang="en">
       <head>
         <Preload />
         <meta name="viewport" content="width=device-width, initial-scale=1" />

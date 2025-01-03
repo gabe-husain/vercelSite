@@ -1,4 +1,5 @@
 import TextPage from "@/src/components/layout/Textpage";
+import Link from "next/link";
 
 export default function MyInv() {
   return (
@@ -12,6 +13,7 @@ export default function MyInv() {
           This app will provide a realtime access to an SQL database built thru PostgreSQL hosted on Supabase.
           
         </p>
+        <Link href="/myInv/all-items">View all items</Link>
       </div>
     </TextPage>
   );
