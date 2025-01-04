@@ -39,6 +39,7 @@ export default function AddItemForm() {
         if (cachedLocations && (now - lastFetchTime < CACHE_DURATION)) {
           setLocations(cachedLocations);
           if (cachedLocations.length > 0 && formData.location_id === 0) {
+            { /* @ts-expect-error  TS doesn't know that cachedLocations is an array */ }
             setFormData(prev => ({ ...prev, location_id: cachedLocations[0].id }));
           }
           return;
@@ -75,7 +76,7 @@ export default function AddItemForm() {
       .insert(formData)
       .select();
 
-    type ItemInsertData = QueryData<typeof itemInsertQuery>;
+    // type ItemInsertData = QueryData<typeof itemInsertQuery>;
 
     try {
       const { error } = await itemInsertQuery;
