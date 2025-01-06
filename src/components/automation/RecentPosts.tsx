@@ -1,6 +1,7 @@
 import { PropsWithChildren } from "react";
 import Link from 'next/link';
 import { getPosts } from '@/src/lib/posts';
+import "@/src/styles/RecentPosts.css"
 
 interface RecentPostsProps extends PropsWithChildren {
   type: 'posts' | 'recipes';
@@ -27,6 +28,12 @@ export default async function RecentPosts({ children, type }: RecentPostsProps) 
           </Link>
         ))}
       </div>
+      <Link 
+        href={`/blog/${type}`} 
+        className="view-all-link"
+      >
+        View all {type}
+      </Link>
     </div>
   );
 }

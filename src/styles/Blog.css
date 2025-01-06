@@ -7,3 +7,38 @@
   .recent-posts-container > * {
     flex: 1;
   }
+
+  .posts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+  
+  .back-link {
+    color: #666;
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+  
+  .back-link:hover {
+    text-decoration: underline;
+    color: #333;
+  }
+  
+  .all-posts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .all-posts-list .post-preview {
+    padding: 1rem;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+  }
+  
+  .all-posts-list .post-preview:hover {
+    background-color: #f9f9f9;
+  }
