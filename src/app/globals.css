@@ -3,37 +3,88 @@
 @tailwind utilities;
 
 /* -----------------------------
-   Core Theme Variables
+   Core Theme Variables & shadcn/ui Integration
    ----------------------------- */
-:root {
-  --background-light: #f7efe8;
-  --text-light: #2d2d2d;
-  --background-dark: #373434;
-  --text-dark: #f7f2f0;
+@layer base {
+  :root {
+    /* Your original hex colors as CSS variables */
+    --background-light: #f7efe8;
+    --text-light: #2d2d2d;
+    --background-dark: #373434;
+    --text-dark: #f7f2f0;
+
+    /* shadcn/ui variables mapped to your colors */
+    --background: 30 45% 94%;  /* Derived from #f7efe8 */
+    --foreground: 0 0% 18%;   /* Derived from #2d2d2d */
+    
+    /* Supporting shadcn/ui variables using your color scheme */
+    --muted: 30 25% 90%;
+    --muted-foreground: 0 0% 25%;
+    --popover: 30 45% 94%;
+    --popover-foreground: 0 0% 18%;
+    --card: 30 45% 94%;
+    --card-foreground: 0 0% 18%;
+    --border: 30 20% 85%;
+    --input: 30 20% 85%;
+    --primary: 0 0% 18%;
+    --primary-foreground: 30 45% 94%;
+    --secondary: 30 25% 90%;
+    --secondary-foreground: 0 0% 18%;
+    --accent: 30 35% 85%;
+    --accent-foreground: 0 0% 18%;
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 30 45% 94%;
+    --ring: 30 20% 75%;
+    --radius: 0.5rem;
+  }
+  
+  .dark {
+    /* shadcn/ui dark mode variables mapped to your dark colors */
+    --background: 0 4% 21%;    /* Derived from #373434 */
+    --foreground: 20 35% 95%;  /* Derived from #f7f2f0 */
+    
+    --muted: 0 4% 26%;
+    --muted-foreground: 20 15% 85%;
+    --popover: 0 4% 21%;
+    --popover-foreground: 20 35% 95%;
+    --card: 0 4% 21%;
+    --card-foreground: 20 35% 95%;
+    --border: 0 4% 31%;
+    --input: 0 4% 31%;
+    --primary: 20 35% 95%;
+    --primary-foreground: 0 4% 21%;
+    --secondary: 0 4% 26%;
+    --secondary-foreground: 20 35% 95%;
+    --accent: 0 4% 31%;
+    --accent-foreground: 20 35% 95%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 20 35% 95%;
+    --ring: 0 4% 31%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background-light text-text-light transition-colors duration-300;
+  }
 }
 
 /* -----------------------------
-   Base Styles
+   Custom Component Styles
    ----------------------------- */
-body {
-  background-color: var(--background-light);
-  color: var(--text-light);
-  transition:
-    background-color 0.3s ease,
-    color 0.3s ease;
-}
-
 .multiline {
   white-space: pre-wrap;
 }
 
 /* -----------------------------
    Navbar Styles
-   Keep grouped for easy future extraction
    ----------------------------- */
 .Navbar {
   border-bottom: 1px solid var(--text-light);
 }
+
 .navbar-items {
   display: flex;
   align-items: center;
@@ -46,6 +97,7 @@ body {
   max-width: 1440px;
   margin: 0 auto;
 }
+
 .navbar-logo-container {
   position: relative;
   width: clamp(80px, 8vw, 120px);
@@ -79,9 +131,9 @@ body {
    ----------------------------- */
 @media (prefers-color-scheme: dark) {
   body {
-    background-color: var(--background-dark);
-    color: var(--text-dark);
+    @apply bg-background-dark text-text-dark;
   }
+  
   .Navbar {
     border-bottom: 1px solid var(--text-dark);
   }

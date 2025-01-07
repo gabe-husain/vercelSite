@@ -1,0 +1,11 @@
+.view-all-link {
+    display: inline-block;
+    margin-top: 1rem;
+    color: #666;
+    text-decoration: underline;
+    font-size: 0.9rem;
+  }
+  
+  .view-all-link:hover {
+    color: #333;
+  }
