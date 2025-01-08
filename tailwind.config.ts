@@ -11,6 +11,7 @@ const colors = {
   "background-dark": "var(--background-dark)",
   "text-dark": "var(--text-dark)",
   
+  // shadcn/ui colors using HSL
   border: "hsl(var(--border))",
   input: "hsl(var(--input))",
   ring: "hsl(var(--ring))",
@@ -47,7 +48,6 @@ const colors = {
 } as const;
 
 const config: Config = {
-  // The content configuration tells Tailwind which files to scan for classes
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
@@ -55,14 +55,8 @@ const config: Config = {
     "./src/**/*.{html,js,tsx,ts,jsx,mdx}",
   ],
 
-  // Theme configuration extends Tailwind's default theme
   theme: {
     extend: {
-
-      //
-      //  Using shadcn/ui tailwind config
-      //
-
       colors,
 
       borderRadius: {
@@ -71,22 +65,10 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
 
-      //
-      //  end shadcn/ui tailwind config
-      //
-
-      // Adding some useful screen breakpoints for responsive design
       screens: {
         xs: "475px",
-        // Default breakpoints are already included:
-        // 'sm': '640px',
-        // 'md': '768px',
-        // 'lg': '1024px',
-        // 'xl': '1280px',
-        // '2xl': '1536px',
       },
 
-      // Adding useful container constraints
       maxWidth: {
         readable: "65ch",
         container: "1440px",
@@ -94,21 +76,16 @@ const config: Config = {
     },
   },
 
-  // Using media queries for dark mode
-  // 'media' means it follows system preferences
-  // 'class' would allow manual toggling
-  darkMode: "media",
+  // Changed to just 'media' since we're using @media queries
+  darkMode: 'media',
 
-  // No plugins are currently needed, but this is where you'd add them
   plugins: [],
 
-  // Additional safelist for dynamically generated classes
   safelist: [
     {
       pattern: /^(bg|text|border)-(background|text)-(light|dark)/,
     },
   ],
-  
 };
 
 export default config;

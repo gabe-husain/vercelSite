@@ -1,11 +1,19 @@
 import TextPage from "@/src/components/layout/Textpage";
 import { getPosts } from '@/src/lib/posts';
 import Link from 'next/link';
+import { Deck, CardInformationProps } from "@/src/components/cards/Deck";
 import "@/src/styles/Blog.css";
 import "@/src/styles/Markdown.css";
 
 export default async function AllPosts() {
   const posts = await getPosts('posts');
+  
+  const cardData: CardInformationProps[] = posts.map((post) => ({
+    title: post.title,
+    subtitle: new Date(post.date).toLocaleDateString(),
+    content: post.excerpt || 'A blog post by Gabriel Husain',
+    link: `/blog/posts/${post.slug}`
+  }));
 
   return (
     <TextPage>
@@ -19,20 +27,7 @@ export default async function AllPosts() {
           </Link>
         </div>
 
-        <div className="all-posts-list">
-          {posts.map((post) => (
-            <Link 
-              href={`/blog/posts/${post.slug}`} 
-              key={post.slug}
-              className="post-link"
-            >
-              <div className="post-preview">
-                <h3>{post.title}</h3>
-                <time>{new Date(post.date).toLocaleDateString()}</time>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <Deck cards={cardData} />
       </div>
     </TextPage>
   );
