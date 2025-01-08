@@ -28,7 +28,6 @@ export function Deck({ cards }: DeckInfoProps) {
             <div className="deck-grid">
                 {cards.map((card, index) => (
                     <CardAnimation key={index} index={index}>
-                        
                         <Card className="deck-card">
                             <Link 
                                 href={card.link || '#'}

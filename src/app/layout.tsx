@@ -51,6 +51,10 @@ export default function RootLayout({
         <Analytics />
         <SpeedInsights />
       </body>
+
+      <footer >
+        <p>2025 Made with 🫧 in 🗽 by Gabriel</p>
+      </footer>
     </html>
   );
 }
