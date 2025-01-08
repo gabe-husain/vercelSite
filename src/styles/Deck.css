@@ -3,13 +3,17 @@
     margin-right: auto;
     padding-left: 1rem;
     padding-right: 1rem;
+    width: 100%;
+    overflow: hidden;
 }
-  
+
 .deck-grid {
     display: grid;
     grid-template-columns: repeat(1, minmax(0, 1fr));
     gap: 2rem;
     justify-items: center;
+    width: 100%;
+    position: relative;
 }
   
 @media (min-width: 768px) {
@@ -23,16 +27,10 @@
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
-
 .deck-card-link {
     width: 100%;
     max-width: 28rem;
     text-decoration: none;
-    transition: transform 0.2s ease;
-}
-
-.deck-card-link:hover {
-    transform: translateY(-2px);
 }
 
 .deck-card {
@@ -42,12 +40,13 @@
     flex-direction: column;
     border-radius: 0.75rem;
     transition: background-color 0.2s ease;
+    transform-origin: center center;  /* Add this for better scaling */
 }
 
 .deck-card-link:hover .deck-card {
     background-color: hsl(var(--muted));
 }
-  
+
 .deck-card-header {
     flex: none;
 }
@@ -81,4 +80,41 @@
   
 .deck-card-link:hover .deck-link {
     color: rgba(var(--muted-foreground), 0.8);
+}
+
+/*
+    Animations
+*/
+/*
+@keyframes slideInFromRight {
+    0% {
+        transform: translateX(50px);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.deck-card-link {
+    width: 100%;
+    max-width: 28rem;
+    text-decoration: none;
+    opacity: 0;
+}
+
+.deck-card-link.animate {
+    animation: slideInFromRight 0.6s ease forwards;
+}
+*/
+
+.deck-container {
+    width: 100%;
+    overflow: hidden;  /* This prevents horizontal scrolling from animations */
+}
+
+.deck-grid {
+    width: 100%;
+    position: relative;  /* Add this */
 }
