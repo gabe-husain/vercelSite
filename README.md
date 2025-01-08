@@ -12,12 +12,14 @@ yarn dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+I'd prefer you ran it with npm run build and then npm start
+there's some issues with animations in dev, probably because its partial hydration
+
 ## Project Structure
 
 ```
 ├── src/
 │   ├── app/                   # App router directory
-│   ├── pages                  # Pages directory
 │   ├── components/            # Reusable components
 │   ├── lib/                   # Utility functions
 │   ├── types/                 # TypeScript types
