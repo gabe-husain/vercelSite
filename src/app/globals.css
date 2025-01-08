@@ -7,35 +7,43 @@
    ----------------------------- */
 @layer base {
   :root {
-    /* Your original hex colors as CSS variables */
-    --background-light: #f7efe8;
-    --text-light: #2d2d2d;
-    --background-dark: #373434;
+    --background-light: #f0d8cb; 
+    --text-light: #2d2d2d; 
+    --background-dark: #373434; 
     --text-dark: #f7f2f0;
 
-    /* shadcn/ui variables mapped to your colors */
-    --background: 30 45% 94%;  /* Derived from #f7efe8 */
-    --foreground: 0 0% 18%;   /* Derived from #2d2d2d */
+    /* Base colors */
+    --background: 30 45% 94%;     /* Your specified background */
+    --foreground: 0 0% 18%;       /* Your specified foreground */
+  
+    /* Component colors derived from base */
+    --muted: 30 45% 90%;          /* Slightly muted background */
+    --muted-foreground: 0 0% 35%; /* Lighter than foreground for muted text */
     
-    /* Supporting shadcn/ui variables using your color scheme */
-    --muted: 30 25% 90%;
-    --muted-foreground: 0 0% 25%;
-    --popover: 30 45% 94%;
-    --popover-foreground: 0 0% 18%;
-    --card: 30 45% 94%;
-    --card-foreground: 0 0% 18%;
-    --border: 30 20% 85%;
-    --input: 30 20% 85%;
-    --primary: 0 0% 18%;
-    --primary-foreground: 30 45% 94%;
-    --secondary: 30 25% 90%;
-    --secondary-foreground: 0 0% 18%;
-    --accent: 30 35% 85%;
-    --accent-foreground: 0 0% 18%;
-    --destructive: 0 100% 50%;
-    --destructive-foreground: 30 45% 94%;
-    --ring: 30 20% 75%;
-    --radius: 0.5rem;
+    --popover: 30 45% 94%;        /* Same as background */
+    --popover-foreground: 0 0% 18%; /* Same as foreground */
+    
+    --card: 30 45% 94%;           /* Same as background */
+    --card-foreground: 0 0% 18%;  /* Same as foreground */
+    
+    --border: 30 45% 85%;         /* Slightly darker than background */
+    --input: 30 45% 85%;          /* Same as border */
+    
+    --primary: 0 0% 18%;          /* Same as foreground */
+    --primary-foreground: 30 45% 94%; /* Same as background */
+    
+    --secondary: 30 45% 90%;      /* Slightly muted background */
+    --secondary-foreground: 0 0% 18%; /* Same as foreground */
+    
+    --accent: 30 45% 85%;         /* Slightly darker than background */
+    --accent-foreground: 0 0% 18%; /* Same as foreground */
+    
+    --destructive: 0 85% 60%;     /* Warm red that fits the palette */
+    --destructive-foreground: 30 45% 94%; /* Same as background */
+    
+    --ring: 30 45% 80%;           /* Darker than background for focus rings */
+  
+    --radius: 0.5rem;             /* Unchanged border radius */
   }
 
   * {
@@ -43,12 +51,12 @@
   }
 
   body {
-    background: var(--background);
+    background: hsl(var(--background));
     font: sans-serif;
     font-family: sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    color: var(--foreground);
+    color: hsl(var(--foreground));
     transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
     transition-duration: 300ms;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);  }
@@ -114,8 +122,8 @@
    ----------------------------- */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: var(--background-dark);
-    --foreground: var(--text-dark);
+    --background: 0 0% 18%;
+    --foreground: 20 35% 95%;
     --muted: 0 4% 26%;
     --muted-foreground: 20 15% 85%;
     --popover: 0 4% 21%;
