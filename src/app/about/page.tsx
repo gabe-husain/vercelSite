@@ -5,13 +5,16 @@ export const metadata = {
   	title: 'About Page',
 };
 
-const cardData = [
+const deprecatedCardData = [
     {
         title: "Colab Shuffle",
         subtitle: "Deprecated, Spotify no longer supports audio features",
 		content: "An app that allows users to create collaborative playlists that clusters the songs and rearranges them based off their audio features.",
         link: "https://estgab413.pythonanywhere.com/"
     },
+];
+
+const currentCardData = [
     {
         title: "MoBHit",
         subtitle: "Created for the Banfield Lab",
@@ -31,6 +34,26 @@ const cardData = [
 		link: "/myInv"
 	}
 ];
+const phishingCardData = [
+    {
+        title: "LFNY fpa login",
+        subtitle: "A feigned login page for my high school wifi filter",
+		content: "Why would I need to bypass or hide my traffic if the school wifi thinks I'm someone else browsing the internet? also there is a rickroll site that it used to redirect you to...",
+        link: "https://gawesome13.github.io/lfny1/lfny,fpa.html"
+    },
+    {
+        title: "Instagram Login",
+        subtitle: "THIS IS A PHISHING SITE, it quite literally sends your login to me",
+        content: "Also made around the same time... I think its funny to ask people to check out and friend me only to then tell them that they just gave me their login info. Internet safety is important always check the url",
+		link: "https://gawesome13.github.io/insta/instagram.html"
+    },
+	{
+		title: "Facebook Login",
+		subtitle: "broken basically",
+		content: "This was always the hardest one to do. Facebook updates their outer HTML and css so I would have to recopy and reset it up each time... kinda ridiculous",
+		link: "https://gawesome13.github.io/insta/facebook.html"
+	}
+];
 
 export default function About() {
   return (
@@ -47,7 +70,24 @@ export default function About() {
 				Here is a list of past projects built by Gabriel Husain: <br />
 				For any of the python ones email Gabriel so he can give you access.
 			</p>
-			<Deck cards={cardData} />
+			<Deck cards={currentCardData} />
+
+			<h2 className="title">Deprecated Projects</h2>
+			<Deck cards={deprecatedCardData} />
+
+			<h2 className="title">Phishing Projects</h2>
+			<p className="textBody">
+				These sites are what got me into programming well this and a couple other things, they were fun ways to keep my friends on their toes back in middle school. <br />
+				The login pages dont actually send the information to anyone and instead just post them to the url <br />
+				We all gotta start somewhere... <br />
+				What I learned from these projects is that I and my friends should always check the url before logging in to any site. <br />
+				And that its SOOO easy to make a phishing site, especially as a 14 year old <br />
+			</p>
+			<p className="textBody">
+				please don't use these sites to phish people, it's not cool and it's illegal and also don't put in your own login
+			</p>
+			<Deck cards={phishingCardData} />
+
       	</div>
     </TextPage>
   );
