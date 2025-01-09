@@ -1,0 +1,15 @@
+.accordion {
+    border-color: hsl(var(--muted-foreground));
+}
+
+.accordionTitle {
+    font-size: clamp(1.5rem, 2vw, 2rem);
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.accordionSubtitle {
+    font-size: clamp(1.2rem, 1.5vw, 1.75rem);
+    font-weight: 500;
+    margin-bottom: 1rem;
+  }
