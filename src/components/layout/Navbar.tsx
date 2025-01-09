@@ -5,7 +5,8 @@ import "@/src/app/globals.css";
 export default function Navbar() {
   const pages = [
     { page: "Blog", href: "/blog" },
-    { page: "About/Projects", href: "/about" },
+    { page: "About", href: "/about" },
+    { page: "Projects", href: "/projects" },
     { page: "Contact", href: "/contact" },
     { page: "myInv", href: "/myInv" },
   ];
