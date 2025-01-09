@@ -54,26 +54,27 @@ export default function RootLayout({
         </main>
         <Analytics />
         <SpeedInsights />
-      </body>
 
-      <footer >
-      <div className="github">
-          <p>2025 Made with 🫧 in 🗽 by Gabriel ⦿ </p>
-          <Link href="https://github.com/gabe-husain">
-            <svg className="w-6 h-6">
-              <path d={ghSvgCode}></path>
-            </svg>
-            <span>gabe.husain</span>
-          </Link>
-          <span> ⦿ </span>
-          <Link href="https://x.com/gab_h333">
-            <svg className="w-6 h-6">
-              <path d={XSvgCode}></path>
-            </svg>
-            <span>@gab_h333</span>
-          </Link>
+        <footer >
+          <div className="github">
+            <p>2025 Made with 🫧 in 🗽 by Gabriel ⦿ </p>
+            <Link href="https://github.com/gabe-husain">
+              <svg className="w-6 h-6">
+                <path d={ghSvgCode}></path>
+              </svg>
+              <span>gabe.husain</span>
+            </Link>
+            <span> ⦿ </span>
+            <Link href="https://x.com/gab_h333">
+                <svg className="w-6 h-6">
+                  <path d={XSvgCode}></path>
+                </svg>
+              <span>@gab_h333</span>
+            </Link>
           </div>
-      </footer>
+        </footer>
+
+      </body>
     </html>
   );
 }
