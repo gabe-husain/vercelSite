@@ -1,6 +1,6 @@
 import TextPage from "@/src/components/layout/Textpage";
 import { Deck } from "@/src/components/cards/Deck";
-import { currentCardData, deprecatedCardData, phishingCardData } from "@/src/app/projects/cardData";
+import { currentCardData, deprecatedCardData, phishingCardData, otherProjectsCardData } from "@/src/app/projects/cardData";
 import {
 	Accordion,
 	AccordionContent,
@@ -55,6 +55,13 @@ export default function Projects() {
 							And that its SOOO easy to make a phishing site, especially as a 14 year old <br />
 						</p>
 						<Deck cards={phishingCardData} />
+					</AccordionContent>
+				</AccordionItem>
+                <AccordionItem value="item-3">
+					<AccordionTrigger className="accordionTitle">Other Projects!</AccordionTrigger>
+					<AccordionContent className="accordionContent">
+						<h3 className="accordionSubtitle">Here are some various other projects.</h3>
+						<Deck cards={otherProjectsCardData} />
 					</AccordionContent>
 				</AccordionItem>
 			</Accordion>
