@@ -62,11 +62,38 @@
     transition-duration: 300ms;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);  }
 }
+
 footer {
   border-top: 1px solid hsl(var(--faded-foreground));
   color: hsl(var(--muted-foreground));
   padding: 1.5rem;
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.github {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+footer svg {
+  fill: hsl(var(--muted-foreground));
+}
+
+footer span {
+  margin-left: 0.25rem;
+}
+
+footer p {
+  margin: 0;
+}
+
+footer a {
+  display: flex;
+  align-items: center;
 }
 
 /* -----------------------------
