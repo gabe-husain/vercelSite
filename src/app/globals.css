@@ -47,9 +47,6 @@
     --radius: 0.5rem;             /* Unchanged border radius */
   }
 
-  * {
-    @apply border-border;
-  }
 
   body {
     background: hsl(var(--background));
