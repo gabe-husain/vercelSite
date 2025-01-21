@@ -25,6 +25,12 @@ export const currentCardData = [
         subtitle: "NEXT.JS - the main reason for this site",
         content: "Gabriel's inventory of his stuff. It's a work in progress, but it's pretty cool, and you know exactly whats in his pantry",
         link: "/myInv"
+    },
+    {
+        title: "Custom Subtitles Extension",
+        subtitle: "JS - Allows Subtitles on any page for any video using SRT",
+        content: "I hate video player subtitles, here I'll allow you to upload one or multiple SRT files on any page, especially for your streamed/pir*ted movies! drag and drop chrome extension",
+        link: "https://github.com/gabe-husain/custom-subtitles"
     }
 ];
 
