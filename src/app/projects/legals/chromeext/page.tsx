@@ -54,10 +54,6 @@ export default function PrivacyPolicy() {
                 <h3 className="font-semibold">storage Permission</h3>
                 <p>Used to store subtitle files and preferences locally</p>
               </div>
-              <div>
-                <h3 className="font-semibold">Host Permission</h3>
-                <p>Enables functionality across different video websites</p>
-              </div>
             </div>
           </section>
 
