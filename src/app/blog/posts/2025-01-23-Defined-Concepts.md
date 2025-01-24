@@ -1,0 +1,1 @@
+/Users/gabrielhusain/Documents/Obsidian/main/Gabriel's Brain/My-Zettel!/Defined Concepts.md
