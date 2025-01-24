@@ -25,12 +25,6 @@ export const currentCardData = [
         subtitle: "NEXT.JS - the main reason for this site",
         content: "Gabriel's inventory of his stuff. It's a work in progress, but it's pretty cool, and you know exactly whats in his pantry",
         link: "/myInv"
-    },
-    {
-        title: "Custom Subtitles Extension",
-        subtitle: "JS - Allows Subtitles on any page for any video using SRT",
-        content: "I hate video player subtitles, here I'll allow you to upload one or multiple SRT files on any page, especially for your streamed/pir*ted movies! drag and drop chrome extension",
-        link: "https://github.com/gabe-husain/custom-subtitles"
     }
 ];
 
@@ -65,14 +59,20 @@ export const otherProjectsCardData = [
     {
         title: "Recipe Converter Yeast-Sourdough",
         subtitle: "REPLIT - A simple recipe converter for yeast based recipes to sourdough starter",
-        content: "Probably my most used piece of code that I've written. A simple script that never gets old. Online calculator",
+        content: "Complete - Probably my most used piece of code that I've written. A simple script that never gets old. Online calculator",
         link: "https://replit.com/@gawesome13/recipe-converter"
     },
     {
         title: "The Revolution is at Hunter College",
         subtitle: "DOCUMENTARY - A site for a club at Hunter College",
-        content: 'An Interview with Kazembe Balagun of Rosa-Luxemburg-Stiftung',
+        content: 'Complete - An Interview with Kazembe Balagun of Rosa-Luxemburg-Stiftung',
         link:'https://drive.google.com/file/d/1IMNMfh_qPVBoy9-ctYmH6NiA2exkJNiU/view',
-    }
+    },
+    {
+        title: "Custom Subtitles Extension",
+        subtitle: "JS - Allows Subtitles on any page for any video using SRT",
+        content: "Complete - I hate video player subtitles, here I'll allow you to upload one or multiple SRT files on any page, especially for your streamed/pir*ted movies! drag and drop chrome extension, under chrome web store review",
+        link: "https://github.com/gabe-husain/custom-subtitles"
+    },
 
 ];
