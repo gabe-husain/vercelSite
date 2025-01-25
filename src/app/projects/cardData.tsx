@@ -72,7 +72,7 @@ export const otherProjectsCardData = [
         title: "Custom Subtitles Extension",
         subtitle: "JS - Allows Subtitles on any page for any video using SRT",
         content: "Complete - I hate video player subtitles, here I'll allow you to upload one or multiple SRT files on any page, especially for your streamed/pir*ted movies! drag and drop chrome extension, under chrome web store review",
-        link: "https://github.com/gabe-husain/custom-subtitles"
+        link: "https://chromewebstore.google.com/detail/dual-subtitle-overlay/dkmlgdlmkbhldejdbdkglbgffahnioml"
     },
 
 ];
