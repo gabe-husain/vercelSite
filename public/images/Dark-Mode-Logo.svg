@@ -1,2 +1,158 @@
-<?xml version="1.0" encoding="utf-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" xmlns:bx="https://boxy-svg.com" width="500px" height="500px"><defs><bx:guide x="250.10378982347382" y="153.5825153810327" angle="0"/><bx:export><bx:file format="svg" href="#object-0"/><bx:file format="svg" path="Dark-Mode-logo.svg"/></bx:export><linearGradient id="black" bx:pinned="true" gradientUnits="userSpaceOnUse"><stop style="stop-color: rgb(55, 52, 52);"/></linearGradient><linearGradient id="creme" bx:pinned="true" gradientUnits="userSpaceOnUse"><stop style="stop-color: rgb(247, 242, 240);"/></linearGradient><linearGradient id="pink" bx:pinned="true" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1.977108, 0, 0, 1.977108, -245.153564, -244.277496)"><stop style="stop-color: rgb(247, 239, 232);"/></linearGradient><linearGradient id="pink-contrast" bx:pinned="true" gradientUnits="userSpaceOnUse" gradientTransform="matrix(3.908957, 0, 0, 3.908957, -285.251083, -284.193192)"><stop style="stop-color: rgb(45, 45, 45);"/></linearGradient></defs><ellipse style="stroke: rgba(0, 0, 0, 0); fill: url(&quot;#pink&quot;);" cx="249.123" cy="250" rx="212.933" ry="212.933" id="object-0"/><rect x="241.116" y="312.819" width="269.018" height="269.018" style="stroke: rgba(255, 255, 255, 0); fill: url(&quot;#pink-contrast&quot;); transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.707107, 0.707107, -0.707107, 0.707107, -126.502355, -197.32739)"/><g style="" transform="matrix(1.977108, 0, 0, 1.977108, -245.153564, -244.277496)"><rect y="215.377" width="23.307" height="69.245" style="paint-order: fill; stroke: rgba(0, 0, 0, 0); fill: url(&quot;#pink&quot;);" x="328.346"/><ellipse style="stroke: rgba(0, 0, 0, 0); fill: url(&quot;#pink&quot;);" cx="250" cy="250" rx="40.742" ry="40.742"/><rect y="244.741" width="107.345" height="6.104" style="paint-order: fill; stroke: rgba(4, 4, 4, 0); fill: url(&quot;#pink&quot;);" x="250"/><rect y="145.785" width="12.779" height="48.429" style="paint-order: fill; stroke: rgba(4, 4, 4, 0); fill: url(&quot;#pink&quot;);" x="243.61"/><rect y="305.785" width="12.779" height="48.429" style="paint-order: fill; stroke: rgba(4, 4, 4, 0); fill: url(&quot;#pink&quot;);" x="243.61"/><rect y="215.377" width="23.307" height="69.245" style="paint-order: fill; stroke: rgba(4, 4, 4, 0); fill: url(&quot;#pink&quot;);" x="148.347"/></g><rect y="250.605" width="215.576" height="11.078" style="stroke: rgba(0, 0, 0, 0); fill-rule: nonzero; fill: url(&quot;#pink-contrast&quot;);" x="248.234"/></svg>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 500 500"
+   width="500px"
+   height="500px"
+   version="1.1"
+   id="svg10"
+   sodipodi:docname="Dark-Mode-Logo.svg"
+   inkscape:version="1.4 (e7c3feb1, 2024-10-09)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:bx="https://boxy-svg.com">
+  <sodipodi:namedview
+     id="namedview10"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="0.16078714"
+     inkscape:cx="-96.400746"
+     inkscape:cy="-273.65373"
+     inkscape:window-width="1104"
+     inkscape:window-height="525"
+     inkscape:window-x="0"
+     inkscape:window-y="37"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg10" />
+  <defs
+     id="defs4">
+    <bx:guide
+       x="250.10378982347382"
+       y="153.5825153810327"
+       angle="0" />
+    <bx:export>
+      <bx:file
+         format="svg"
+         href="#object-0" />
+      <bx:file
+         format="svg"
+         path="Dark-Mode-logo.svg" />
+    </bx:export>
+    <linearGradient
+       id="black"
+       bx:pinned="true"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         style="stop-color: rgb(55, 52, 52);"
+         id="stop1" />
+    </linearGradient>
+    <linearGradient
+       id="creme"
+       bx:pinned="true"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         style="stop-color: rgb(247, 242, 240);"
+         id="stop2" />
+    </linearGradient>
+    <linearGradient
+       id="pink"
+       bx:pinned="true"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1.977108, 0, 0, 1.977108, -245.153564, -244.277496)">
+      <stop
+         style="stop-color: rgb(247, 239, 232);"
+         id="stop3" />
+    </linearGradient>
+    <linearGradient
+       id="pink-contrast"
+       bx:pinned="true"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(3.908957, 0, 0, 3.908957, -285.251083, -284.193192)">
+      <stop
+         style="stop-color: rgb(45, 45, 45);"
+         id="stop4" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#pink-contrast"
+       id="linearGradient10"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(3.9089582,0,0,3.9089582,-311.9354,-730.07452)" />
+  </defs>
+  <ellipse
+     style="stroke: rgba(0, 0, 0, 0); fill: url(&quot;#pink&quot;);"
+     cx="249.123"
+     cy="250"
+     rx="212.933"
+     ry="212.933"
+     id="object-0" />
+  <rect
+     x="214.43184"
+     y="-133.06215"
+     width="269.0181"
+     height="269.0181"
+     style="fill:url(#linearGradient10)"
+     transform="rotate(45)"
+     id="rect4" />
+  <g
+     style=""
+     transform="matrix(1.977108, 0, 0, 1.977108, -245.153564, -244.277496)"
+     id="g9">
+    <rect
+       y="215.377"
+       width="23.307"
+       height="69.245"
+       style="paint-order: fill; stroke: rgba(0, 0, 0, 0); fill: url(&quot;#pink&quot;);"
+       x="328.346"
+       id="rect5" />
+    <ellipse
+       style="stroke: rgba(0, 0, 0, 0); fill: url(&quot;#pink&quot;);"
+       cx="250"
+       cy="250"
+       rx="40.742"
+       ry="40.742"
+       id="ellipse5" />
+    <rect
+       y="244.741"
+       width="107.345"
+       height="6.104"
+       style="paint-order: fill; stroke: rgba(4, 4, 4, 0); fill: url(&quot;#pink&quot;);"
+       x="250"
+       id="rect6" />
+    <rect
+       y="145.785"
+       width="12.779"
+       height="48.429"
+       style="paint-order: fill; stroke: rgba(4, 4, 4, 0); fill: url(&quot;#pink&quot;);"
+       x="243.61"
+       id="rect7" />
+    <rect
+       y="305.785"
+       width="12.779"
+       height="48.429"
+       style="paint-order: fill; stroke: rgba(4, 4, 4, 0); fill: url(&quot;#pink&quot;);"
+       x="243.61"
+       id="rect8" />
+    <rect
+       y="215.377"
+       width="23.307"
+       height="69.245"
+       style="paint-order: fill; stroke: rgba(4, 4, 4, 0); fill: url(&quot;#pink&quot;);"
+       x="148.347"
+       id="rect9" />
+  </g>
+  <rect
+     y="250.605"
+     width="215.576"
+     height="11.078"
+     style="stroke: rgba(0, 0, 0, 0); fill-rule: nonzero; fill: url(&quot;#pink-contrast&quot;);"
+     x="248.234"
+     id="rect10" />
+</svg>

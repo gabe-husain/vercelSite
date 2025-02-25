@@ -3,6 +3,20 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Navbar from "../components/layout/Navbar";
 import Link from "next/link";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: {
+    default: 'Gabriel\'s Site',
+    template: '%s - Gabriel\'s Site'
+  },
+  description: 'Gabriel\'s personal website featuring blog posts, recipes, and projects',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/favicon.ico'
+  }
+};
 
 // Advanced preload component
 const Preload = () => {
