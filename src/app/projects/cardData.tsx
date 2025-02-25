@@ -5,6 +5,12 @@ export const deprecatedCardData = [
         content: "An app that allows users to create collaborative playlists that clusters the songs and rearranges them based off their audio features.",
         link: "https://estgab413.pythonanywhere.com/"
     },
+    {
+        title: "Spotify Now Playing Viewer and Playlist Generator",
+        subtitle: "FLASK - Deprecated, but was a cool project while it lasted",
+        content: "Used marquee animation and album color analysis to create dynamic backgrounds. Featured both a marquee-only view and album cover display options.",
+        link: "https://gawesome13.pythonanywhere.com/"
+    },
 ];
 
 export const currentCardData = [
@@ -21,10 +27,10 @@ export const currentCardData = [
         link: "https://gabh.pythonanywhere.com/"
     },
     {
-        title: "Spotify Now Playing Viewer and Playlist Generator",
-        subtitle: "FLASK - The latter is deprecated again, but the first works! and it looks pretty cool",
-        content: "It works using a marquee thing and figures out what color cluster is the most in the album and the makes the background that color. You scroll to either have marquee only or album cover too",
-        link: "https://gawesome13.pythonanywhere.com/"
+        title: "Gabbsite",
+        subtitle: "NEXT.JS - My External Brain",
+        content: "A Second brain implementation where I store my thoughts, notes, and knowledge. Built with Next.js and integrated with my Obsidian vault for seamless knowledge management. I have lots of bad words there though since it's my thoughts unfiltered. Please forgive.",
+        link: "https://gab-site.vercel.app/"
     },
     {
         title: "My Inventory",
