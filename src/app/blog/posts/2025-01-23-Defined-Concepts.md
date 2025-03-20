@@ -41,7 +41,11 @@ whats the point in using something that goes completely against how I would usua
 ## We build on the backs of giants
 or a bastardization of [standing on the shoulders of giants](https://en.wikipedia.org/wiki/Standing_on_the_shoulders_of_giants)
 
-I use this phrase instead of standing on the shoulders of giants, not because I just want to be a [contrarian](https://en.wiktionary.org/wiki/contrarian) but because I want to adapt the adage for use as someone who wants to build. Creating, making something of some sort, I think its important to note we can only build thanks to all those before us. No more are the days of stagnation! STAY THE FUCK AWAY!
+I use this phrase instead of standing on the shoulders of giants, not because I just want to be a [contrarian](https://en.wiktionary.org/wiki/contrarian) but because I want to adapt the adage for use as someone who wants to build. Creating, making something of some sort, I think its important to note we can only build thanks to all those before us. No more are the days of stagnation! STAY THE FUCK AWAY! 
+
+Other thoughts. should we? doesn't this mean we lose some knowledge? sure we ship faster but at what fucking cost. at the cost of so much knowledge on the inner workings. We could understand it, so maybe we should.
+
+
 ## Soyez Autonome!
 or *Débrouille-toi... Be self sufficient!*
 
