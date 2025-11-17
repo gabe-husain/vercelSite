@@ -65,21 +65,30 @@ or _Something else I know it's out there_
 
 I don't know where I saw this before but I know that its not an original thought. It is so important to take the time to create and to channel the beauty that you can observe in the world into something that you can experience. Oh what an art form.
 
-## [[Bokonism]]
-from *[Cat’s Cradle](https://en.m.wikipedia.org/wiki/Cat%27s_Cradle)* 
+## Bokonism
+from *[Cat’s Cradle](https://en.m.wikipedia.org/wiki/Cat%27s_Cradle)*  and main page at [[Bokonism]]
 
 There are plenty of important terms defined here. I’ll list a couple but for the rest, please see the main page!
 - Karass: Your squad knowingly or unknowingly
 - Duprass: Squad of two, often in love
 - Granfalloon: False Karass, like alumni from a same uni, etc.
 
-## [[Schema-Switching]]
+## Schema-Switching
 _see the main article at [[Schema-Switching]]_
 
 Well Well Well. Similar to Code switching, this actually affects the ways you are going to respond to specific instructions or different situations. This is analogous to how we set up Models as [[Mixture of Experts]]
 
+## SWORM
+_or Schema vieW Of the Reality Manifold_
+_see the main article at [[SWORM]]_
 
+Schema World View Of The Reality Manifold. This is a weird high dimensional [[Manifold]] that we find ourselves living in. and everyone going through this damn manifold, yes even the animals and the insects and the bacteria have their own too. Even the trees, the fungi and the rocks. They all have their mark on their world, and written in their engravings, their experience with the world viewed through their own [[Schema]], no matter how complex and how simple they may be, oh how arbitrary are the qualifiers! What is even complex and what is simple if they are both incomplete views and made of different, discrete, and infinitesimally small pieces which might all rely on something that exists in so many high dimensions that we couldn't possibly figure out what it was. Anyways. Theres more to write, more to discuss, what an interesting concept.
 
+## There is no goal
+_or Man is Condemned to be Free_
+
+There is no goal to life, Remember this. Internalize it.
+Because this will set you free!
 
 ---
 # References
