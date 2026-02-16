@@ -99,7 +99,7 @@ export default function KitchenNavigator({ items, locations, canEdit = false }: 
   // ── Creak audio ──
   useEffect(() => {
     const audio = new Audio('/sounds/creak.mp3')
-    audio.volume = 0.3
+    audio.volume = 0.2
     audio.preload = 'auto'
     audio.addEventListener('error', () => { creakAudioRef.current = null })
     creakAudioRef.current = audio
@@ -184,15 +184,18 @@ export default function KitchenNavigator({ items, locations, canEdit = false }: 
   // B1 to C1 (same group) is a no-op: no sound, no animation
   // restart.  Moving from B1 to D1 is a new group, so we play
   // the creak and update.
-  const handleHoverEnter = useCallback((zoneId: string) => {
-    const primary = toPrimary(zoneId)
-    setHoveredGroupPrimary(prev => {
-      if (prev === primary) return prev      // same group → no-op
-      // New group → play creak (but not if it's the already-active/clicked group)
-      playCreak()
-      return primary
-    })
-  }, [playCreak])
+const handleHoverEnter = useCallback((zoneId: string) => {
+  const primary = toPrimary(zoneId)
+  
+  // Only play sound if this is a different group than the one currently being hovered
+  // AND it's not the active group
+  if (primary !== hoveredGroupPrimary && primary !== activeZoneId) {
+    playCreak()
+  }
+  
+  // Always update the hover state
+  setHoveredGroupPrimary(primary)
+}, [playCreak, hoveredGroupPrimary, activeZoneId])
 
   const handleHoverLeave = useCallback(() => {
     setHoveredGroupPrimary(null)

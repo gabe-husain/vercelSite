@@ -28,7 +28,7 @@ export const KITCHEN_ZONES: KitchenZone[] = [
   // UPPER ROW (top of kitchen, y ~ 5-18%)
   // ============================================
   // A1 - top-left small square cabinet
-    { id: 'A1', label: 'A1', locationName: 'A1', x: 2.2, y: 13.3, w: 6.4, h: 11, clickable: true },
+  { id: 'A1', label: 'A1', locationName: 'A1', x: 2.2, y: 13.3, w: 6.4, h: 11, clickable: true },
   { id: 'B1', label: 'B1', locationName: 'B1', x: 8.9, y: 13.6, w: 7.4, h: 10.5, clickable: true },
   { id: 'C1', label: 'C1', locationName: 'C1', x: 16.8, y: 12.8, w: 8.1, h: 10, clickable: true, opensAs: 'B1' },
   { id: 'D1', label: 'D1', locationName: 'D1', x: 25.2, y: 12.8, w: 8.9, h: 10.5, clickable: true },
@@ -52,7 +52,7 @@ export const KITCHEN_ZONES: KitchenZone[] = [
   { id: 'D4', label: 'D4', locationName: 'D4', x: 24.4, y: 66.8, w: 8, h: 14, clickable: true },
   { id: 'E3', label: 'E3', locationName: 'E3', x: 32.6, y: 61.3, w: 8, h: 5, clickable: true },
   { id: 'E4', label: 'E4', locationName: 'E4', x: 32.4, y: 65.8, w: 8, h: 14.8, clickable: true, opensAs: 'D4' },
-  { id: 'F2', label: 'F2', locationName: 'F2', x: 40.3, y: 61.8, w: 8, h: 4, clickable: true },
+  { id: 'F2', label: 'F2', locationName: 'F2', x: 40.3, y: 61.8, w: 12.7, h: 4.7, clickable: true },
   { id: 'F3', label: 'F3', locationName: 'F3', x: 40.8, y: 66.3, w: 12.2, h: 7.3, clickable: true },
   { id: 'F4', label: 'F4', locationName: 'F4', x: 41, y: 73.5, w: 11.9, h: 8, clickable: true },
   { id: 'H2', label: 'H2', locationName: 'H2', x: 53.2, y: 66.9, w: 7.5, h: 5.8, clickable: true },
