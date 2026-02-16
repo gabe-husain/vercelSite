@@ -26,77 +26,121 @@ interface KitchenNavigatorProps {
   canEdit?: boolean
 }
 
-// Build a reverse lookup: for a primary zone, find all its group members (including itself)
-// e.g. 'B1' -> ['B1', 'C1'] because C1 opensAs B1
-function getGroupMembers(zoneId: string): string[] {
-  const members = [zoneId]
-  for (const [alias, primary] of Object.entries(ZONE_GROUPS)) {
-    if (primary === zoneId) members.push(alias)
-  }
-  return members
+// ── Group helpers ──────────────────────────────────────────────
+// Resolve any zone id to its primary (e.g. 'C1' → 'B1', 'B1' → 'B1')
+function toPrimary(zoneId: string): string {
+  return ZONE_GROUPS[zoneId] || zoneId
 }
 
-// Check if an image exists (caches results)
-const imageExistsCache: Record<string, boolean> = {}
-function checkImageExists(src: string): Promise<boolean> {
-  if (src in imageExistsCache) return Promise.resolve(imageExistsCache[src])
+// For a primary zone, return the full set of group member ids (including itself)
+// Pre-compute once at module level for speed.
+const GROUP_MEMBERS: Record<string, Set<string>> = {}
+for (const zone of KITCHEN_ZONES) {
+  if (!zone.clickable) continue
+  const primary = toPrimary(zone.id)
+  if (!GROUP_MEMBERS[primary]) GROUP_MEMBERS[primary] = new Set()
+  GROUP_MEMBERS[primary].add(zone.id)
+}
+
+function getGroupSet(zoneId: string): Set<string> {
+  return GROUP_MEMBERS[toPrimary(zoneId)] || new Set([zoneId])
+}
+
+// ── Image preloading cache ────────────────────────────────────
+// Sits at module level so it persists across re-renders and even
+// hot-reloads during dev.  Once an image is loaded into the
+// browser cache the <img> tag picks it up instantly.
+const imagePreloadCache: Record<string, HTMLImageElement> = {}
+
+function preloadImage(src: string): Promise<boolean> {
+  if (imagePreloadCache[src]) return Promise.resolve(true)
   return new Promise(resolve => {
-    const img = new Image()
-    img.onload = () => { imageExistsCache[src] = true; resolve(true) }
-    img.onerror = () => { imageExistsCache[src] = false; resolve(false) }
+    const img = new window.Image()
+    img.onload = () => { imagePreloadCache[src] = img; resolve(true) }
+    img.onerror = () => { resolve(false) }
     img.src = src
   })
 }
 
+// ── Component ─────────────────────────────────────────────────
 export default function KitchenNavigator({ items, locations, canEdit = false }: KitchenNavigatorProps) {
   const [activeZoneId, setActiveZoneId] = useState<string | null>(null)
-  const [hoveredZoneId, setHoveredZoneId] = useState<string | null>(null)
+  // hoveredGroupPrimary tracks the *primary* id of the currently
+  // hovered group so moving between B1↔C1 is treated as one
+  // continuous hover and doesn't re-trigger anything.
+  const [hoveredGroupPrimary, setHoveredGroupPrimary] = useState<string | null>(null)
   const [tunerActive, setTunerActive] = useState(false)
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const creakAudioRef = useRef<HTMLAudioElement | null>(null)
 
-  // Track which open images actually exist
+  // Which _(open) images are available
   const [openImageAvailable, setOpenImageAvailable] = useState<Record<string, boolean>>({})
 
-  // Pre-check which _open images exist on mount
+  // ── Preload all images on mount ──
   useEffect(() => {
+    // 1. Preload every closed layer
+    ALL_LAYER_FILES.forEach(file => {
+      preloadImage(`/images/kitchen/${file}.png`)
+    })
+
+    // 2. Probe + preload every open variant
     const clickableIds = KITCHEN_ZONES.filter(z => z.clickable).map(z => z.id)
-    clickableIds.forEach(id => {
-      const src = `/images/kitchen/${id}_(open).png`
-      checkImageExists(src).then(exists => {
-        if (exists) {
-          setOpenImageAvailable(prev => ({ ...prev, [id]: true }))
-        }
+    const results: Record<string, boolean> = {}
+    Promise.all(
+      clickableIds.map(id => {
+        const src = `/images/kitchen/${id}_(open).png`
+        return preloadImage(src).then(exists => { results[id] = exists })
       })
+    ).then(() => {
+      setOpenImageAvailable(results)
     })
   }, [])
 
-  // Initialize creak audio (graceful: if file missing, nothing happens)
+  // ── Creak audio ──
   useEffect(() => {
     const audio = new Audio('/sounds/creak.mp3')
     audio.volume = 0.3
     audio.preload = 'auto'
-    // If the sound file doesn't load, just silently fail
-    audio.addEventListener('error', () => {
-      creakAudioRef.current = null
-    })
+    audio.addEventListener('error', () => { creakAudioRef.current = null })
     creakAudioRef.current = audio
     return () => { audio.pause() }
   }, [])
 
-  // Compute all zones that are currently "highlighted" (hovered zone + its group members)
-  const highlightedZoneIds = useMemo(() => {
-    if (!hoveredZoneId) return new Set<string>()
-    // Resolve to the primary zone first
-    const primaryId = ZONE_GROUPS[hoveredZoneId] || hoveredZoneId
-    return new Set(getGroupMembers(primaryId))
-  }, [hoveredZoneId])
+  const playCreak = useCallback(() => {
+    const audio = creakAudioRef.current
+    if (!audio) return
+    audio.currentTime = 0
+    audio.play().catch(() => {})
+  }, [])
 
+  // ── Derived sets ──
+  // The set of zone ids whose images should show as "open".
+  // This is the union of:
+  //   • the active (clicked) group
+  //   • the hovered group (if different from active)
+  const openZoneIds = useMemo(() => {
+    const s = new Set<string>()
+    if (activeZoneId) {
+      getGroupSet(activeZoneId).forEach(id => s.add(id))
+    }
+    if (hoveredGroupPrimary) {
+      getGroupSet(hoveredGroupPrimary).forEach(id => s.add(id))
+    }
+    return s
+  }, [activeZoneId, hoveredGroupPrimary])
+
+  // The set of zone ids that should show the hover highlight
+  // (scale-up, background tint).  Only the hovered group, not
+  // the active-but-not-hovered group.
+  const highlightedZoneIds = useMemo(() => {
+    if (!hoveredGroupPrimary) return new Set<string>()
+    return getGroupSet(hoveredGroupPrimary)
+  }, [hoveredGroupPrimary])
+
+  // ── Location lookups ──
   const locationNameToId = useMemo(() => {
     const map: Record<string, number> = {}
-    for (const loc of locations) {
-      map[loc.name] = loc.id
-    }
+    for (const loc of locations) map[loc.name] = loc.id
     return map
   }, [locations])
 
@@ -110,13 +154,8 @@ export default function KitchenNavigator({ items, locations, canEdit = false }: 
     return counts
   }, [items])
 
-  function resolveZoneId(zoneId: string): string {
-    return ZONE_GROUPS[zoneId] || zoneId
-  }
-
   function getItemCountForZone(zone: KitchenZone): number {
-    const resolvedId = resolveZoneId(zone.id)
-    const resolvedZone = KITCHEN_ZONES.find(z => z.id === resolvedId)
+    const resolvedZone = KITCHEN_ZONES.find(z => z.id === toPrimary(zone.id))
     if (!resolvedZone) return 0
     const locId = locationNameToId[resolvedZone.locationName]
     if (!locId) return 0
@@ -125,43 +164,47 @@ export default function KitchenNavigator({ items, locations, canEdit = false }: 
 
   function getItemsForActiveZone(): ItemWithLocation[] {
     if (!activeZoneId) return []
-    const resolvedId = resolveZoneId(activeZoneId)
-    const zone = KITCHEN_ZONES.find(z => z.id === resolvedId)
+    const zone = KITCHEN_ZONES.find(z => z.id === toPrimary(activeZoneId))
     if (!zone) return []
     const locId = locationNameToId[zone.locationName]
     if (!locId) return []
     return items.filter(item => item.location?.id === locId)
   }
 
+  // ── Click handler ──
   function handleZoneClick(zone: KitchenZone) {
     if (!zone.clickable) return
-    const resolvedId = resolveZoneId(zone.id)
+    const resolvedId = toPrimary(zone.id)
+    // Toggle: clicking the same group again closes it
     setActiveZoneId(prev => prev === resolvedId ? null : resolvedId)
   }
 
-  // Play creak sound once per hover event
-  const playCreak = useCallback(() => {
-    const audio = creakAudioRef.current
-    if (!audio) return
-    audio.currentTime = 0
-    audio.play().catch(() => {/* silently ignore if browser blocks autoplay */})
-  }, [])
-
+  // ── Hover handlers ──
+  // We track hover at the *group* level.  Moving the mouse from
+  // B1 to C1 (same group) is a no-op: no sound, no animation
+  // restart.  Moving from B1 to D1 is a new group, so we play
+  // the creak and update.
   const handleHoverEnter = useCallback((zoneId: string) => {
-    setHoveredZoneId(zoneId)
-    playCreak()
+    const primary = toPrimary(zoneId)
+    setHoveredGroupPrimary(prev => {
+      if (prev === primary) return prev      // same group → no-op
+      // New group → play creak (but not if it's the already-active/clicked group)
+      playCreak()
+      return primary
+    })
   }, [playCreak])
 
   const handleHoverLeave = useCallback(() => {
-    setHoveredZoneId(null)
+    setHoveredGroupPrimary(null)
   }, [])
 
+  // ── Derived data ──
   const activeItems = getItemsForActiveZone()
   const activeZone = activeZoneId ? KITCHEN_ZONES.find(z => z.id === activeZoneId) : null
 
-  const clickableZones = KITCHEN_ZONES.filter(z => z.clickable)
-  const primaryClickableZones = clickableZones.filter(z => !z.opensAs)
-  const aliasZones = clickableZones.filter(z => z.opensAs)
+  const clickableZones = useMemo(() => KITCHEN_ZONES.filter(z => z.clickable), [])
+  const primaryClickableZones = useMemo(() => clickableZones.filter(z => !z.opensAs), [clickableZones])
+  const aliasZones = useMemo(() => clickableZones.filter(z => z.opensAs), [clickableZones])
 
   return (
     <div className="flex flex-col gap-6">
@@ -184,42 +227,38 @@ export default function KitchenNavigator({ items, locations, canEdit = false }: 
 
       {/* Kitchen Map with PNG overlays */}
       <div ref={mapContainerRef} className="relative w-full" style={{ aspectRatio: '2388 / 1668' }}>
-        {/* All PNG layers stacked absolutely — swap to open variant on hover */}
+        {/* All PNG layers — cross-fade between closed/open variants */}
         {ALL_LAYER_FILES.map(file => {
-          const isHighlighted = highlightedZoneIds.has(file)
-          const hasOpenImage = openImageAvailable[file]
-          const showOpen = isHighlighted && hasOpenImage && !tunerActive
+          const shouldOpen = openZoneIds.has(file) && openImageAvailable[file] && !tunerActive
 
           return (
             <React.Fragment key={file}>
-              {/* Normal (closed) image — hide when showing open variant */}
+              {/* Closed image */}
               <img
                 src={`/images/kitchen/${file}.png`}
                 alt=""
                 className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none dark:invert transition-opacity duration-200"
-                style={{ opacity: showOpen ? 0 : 1 }}
+                style={{ opacity: shouldOpen ? 0 : 1 }}
                 draggable={false}
-                loading="lazy"
               />
-              {/* Open variant — only render if available */}
-              {hasOpenImage && (
+              {/* Open variant (only rendered when known to exist) */}
+              {openImageAvailable[file] && (
                 <img
                   src={`/images/kitchen/${file}_(open).png`}
                   alt=""
                   className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none dark:invert transition-opacity duration-200"
-                  style={{ opacity: showOpen ? 1 : 0 }}
+                  style={{ opacity: shouldOpen ? 1 : 0 }}
                   draggable={false}
-                  loading="lazy"
                 />
               )}
             </React.Fragment>
           )
         })}
 
-        {/* Clickable hotspot overlays for primary zones (hidden when tuner is active) */}
+        {/* ── Primary zone hotspots ── */}
         {!tunerActive && primaryClickableZones.map(zone => {
           const count = getItemCountForZone(zone)
-          const isActive = activeZoneId === zone.id
+          const isActive = toPrimary(activeZoneId || '') === zone.id
           const isHovered = highlightedZoneIds.has(zone.id)
 
           return (
@@ -290,9 +329,10 @@ export default function KitchenNavigator({ items, locations, canEdit = false }: 
           )
         })}
 
-        {/* Alias zones (grouped partners) - clickable areas that redirect + also trigger group highlight */}
+        {/* ── Alias zone hotspots (grouped partners) ── */}
         {!tunerActive && aliasZones.map(zone => {
           const isHovered = highlightedZoneIds.has(zone.id)
+          const isActive = toPrimary(activeZoneId || '') === toPrimary(zone.id)
 
           return (
             <div
@@ -308,9 +348,16 @@ export default function KitchenNavigator({ items, locations, canEdit = false }: 
                 height: `${zone.h}%`,
                 transform: isHovered ? 'scale(1.04)' : 'scale(1)',
                 transformOrigin: 'center center',
-                zIndex: isHovered ? 20 : 10,
+                zIndex: isHovered || isActive ? 20 : 10,
                 borderRadius: '4px',
-                background: isHovered ? 'hsla(var(--primary), 0.08)' : 'transparent',
+                background: isActive
+                  ? 'hsla(var(--primary), 0.15)'
+                  : isHovered
+                    ? 'hsla(var(--primary), 0.08)'
+                    : 'transparent',
+                outline: isActive
+                  ? '2px solid hsl(var(--primary))'
+                  : 'none',
               }}
               role="button"
               tabIndex={0}
