@@ -1,119 +1,65 @@
-'use client';
+'use client'
 
-import React, { useEffect, useState } from 'react';
-import { createClient } from '@/utils/supabase/client';
-import { Database } from '@/database.types';
-import { QueryData } from '@supabase/supabase-js';
+import React, { useState, useTransition } from 'react'
+import { addItem } from '@/src/app/myInv/actions'
 
-const supabase = createClient();
+type Location = {
+  id: number
+  name: string
+  notes: string | null
+}
 
-// Define the locations query type
-const locationsQuery = supabase
-  .from('locations')
-  .select('*')
-  .order('name');
+interface AddItemFormProps {
+  locations: Location[]
+}
 
-type LocationsData = QueryData<typeof locationsQuery>;
-
-// Cache for locations data
-let cachedLocations: LocationsData | null = null;
-let lastFetchTime = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-export default function AddItemForm() {
-  const [locations, setLocations] = useState<LocationsData>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState<Database['public']['Tables']['items']['Insert']>({
+export default function AddItemForm({ locations }: AddItemFormProps) {
+  const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+  const [formData, setFormData] = useState({
     name: '',
-    location_id: 0,
+    location_id: locations[0]?.id ?? 0,
     quantity: 1,
-    notes: ''
-  });
+    notes: '',
+  })
 
-  useEffect(() => {
-    async function fetchLocations() {
-      try {
-        // Check if we have valid cached data
-        const now = Date.now();
-        if (cachedLocations && (now - lastFetchTime < CACHE_DURATION)) {
-          setLocations(cachedLocations);
-          if (cachedLocations.length > 0 && formData.location_id === 0) {
-            { /* @ts-expect-error  TS doesn't know that cachedLocations is an array */ }
-            setFormData(prev => ({ ...prev, location_id: cachedLocations[0].id }));
-          }
-          return;
-        }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
 
-        const { data, error } = await locationsQuery;
-        
-        if (error) throw error;
-
-        // Update cache
-        cachedLocations = data;
-        lastFetchTime = now;
-        
-        setLocations(data);
-        if (data.length > 0 && formData.location_id === 0) {
-          setFormData(prev => ({ ...prev, location_id: data[0].id }));
-        }
-      } catch (err) {
-        setError('Error fetching locations');
-        console.error('Error fetching locations:', err);
+    startTransition(async () => {
+      const result = await addItem(formData)
+      if (result.error) {
+        setError(result.error)
+      } else {
+        setFormData({
+          name: '',
+          location_id: formData.location_id,
+          quantity: 1,
+          notes: '',
+        })
       }
-    }
-
-    fetchLocations();
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError(null);
-
-    const itemInsertQuery = supabase
-      .from('items')
-      .insert(formData)
-      .select();
-
-    // type ItemInsertData = QueryData<typeof itemInsertQuery>;
-
-    try {
-      const { error } = await itemInsertQuery;
-
-      if (error) throw error;
-
-      // Reset form but keep the same location
-      setFormData({
-        name: '',
-        location_id: formData.location_id,
-        quantity: 1,
-        notes: ''
-      });
-
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    })
+  }
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
-    const { name, value } = e.target;
+    const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'quantity' || name === 'location_id' 
-        ? parseInt(value, 10) 
+      [name]: name === 'quantity' || name === 'location_id'
+        ? parseInt(value, 10)
         : value
-    }));
-  };
+    }))
+  }
+
+  const inputClass = "w-full rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 p-4 max-w-xl mx-auto">
       <div className="space-y-2">
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="name" className="block text-sm font-medium text-[hsl(var(--foreground))]">
           Item Name *
         </label>
         <input
@@ -121,14 +67,15 @@ export default function AddItemForm() {
           id="name"
           name="name"
           required
+          maxLength={100}
           value={formData.name}
           onChange={handleChange}
-          className="w-full rounded-md border border-gray-300 px-3 py-2"
+          className={inputClass}
         />
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="location_id" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="location_id" className="block text-sm font-medium text-[hsl(var(--foreground))]">
           Location *
         </label>
         <select
@@ -137,10 +84,10 @@ export default function AddItemForm() {
           required
           value={formData.location_id || ''}
           onChange={handleChange}
-          className="w-full rounded-md border border-gray-300 px-3 py-2"
+          className={inputClass}
         >
           {locations.length === 0 && (
-            <option value="">Loading locations...</option>
+            <option value="">No locations available</option>
           )}
           {locations.map(location => (
             <option key={location.id} value={location.id}>
@@ -151,7 +98,7 @@ export default function AddItemForm() {
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="quantity" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="quantity" className="block text-sm font-medium text-[hsl(var(--foreground))]">
           Quantity
         </label>
         <input
@@ -162,37 +109,38 @@ export default function AddItemForm() {
           required
           value={formData.quantity}
           onChange={handleChange}
-          className="w-full rounded-md border border-gray-300 px-3 py-2"
+          className={inputClass}
         />
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="notes" className="block text-sm font-medium text-[hsl(var(--foreground))]">
           Notes
         </label>
         <textarea
           id="notes"
           name="notes"
-          value={formData.notes || ''}
+          maxLength={500}
+          value={formData.notes}
           onChange={handleChange}
-          className="w-full rounded-md border border-gray-300 px-3 py-2"
+          className={inputClass}
           rows={3}
         />
       </div>
 
       {error && (
-        <div className="text-red-600 text-sm">
+        <div className="text-[hsl(var(--destructive))] text-sm">
           {error}
         </div>
       )}
 
       <button
         type="submit"
-        disabled={isSubmitting}
-        className="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:bg-blue-300"
+        disabled={isPending}
+        className="w-full rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-[hsl(var(--primary-foreground))] hover:opacity-90 disabled:opacity-50 transition-opacity"
       >
-        {isSubmitting ? 'Adding...' : 'Add Item'}
+        {isPending ? 'Adding...' : 'Add Item'}
       </button>
     </form>
-  );
+  )
 }
