@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { KITCHEN_ZONES, ALL_LAYER_FILES, ZONE_GROUPS, type KitchenZone } from '@/src/lib/kitchenZones'
+import { useIsMobile } from '@/src/hooks/useIsMobile'
 import dynamic from 'next/dynamic'
 
 const ZoneFineTuner = dynamic(() => import('./ZoneFineTuner'), { ssr: false })
@@ -27,13 +28,10 @@ interface KitchenNavigatorProps {
 }
 
 // ── Group helpers ──────────────────────────────────────────────
-// Resolve any zone id to its primary (e.g. 'C1' → 'B1', 'B1' → 'B1')
 function toPrimary(zoneId: string): string {
   return ZONE_GROUPS[zoneId] || zoneId
 }
 
-// For a primary zone, return the full set of group member ids (including itself)
-// Pre-compute once at module level for speed.
 const GROUP_MEMBERS: Record<string, Set<string>> = {}
 for (const zone of KITCHEN_ZONES) {
   if (!zone.clickable) continue
@@ -46,10 +44,7 @@ function getGroupSet(zoneId: string): Set<string> {
   return GROUP_MEMBERS[toPrimary(zoneId)] || new Set([zoneId])
 }
 
-// ── Image preloading cache ────────────────────────────────────
-// Sits at module level so it persists across re-renders and even
-// hot-reloads during dev.  Once an image is loaded into the
-// browser cache the <img> tag picks it up instantly.
+// ── Image preloading cache (desktop only) ─────────────────────
 const imagePreloadCache: Record<string, HTMLImageElement> = {}
 
 function preloadImage(src: string): Promise<boolean> {
@@ -64,48 +59,57 @@ function preloadImage(src: string): Promise<boolean> {
 
 // ── Component ─────────────────────────────────────────────────
 export default function KitchenNavigator({ items, locations, canEdit = false }: KitchenNavigatorProps) {
+  const isMobile = useIsMobile()
+
   const [activeZoneId, setActiveZoneId] = useState<string | null>(null)
-  // hoveredGroupPrimary tracks the *primary* id of the currently
-  // hovered group so moving between B1↔C1 is treated as one
-  // continuous hover and doesn't re-trigger anything.
   const [hoveredGroupPrimary, setHoveredGroupPrimary] = useState<string | null>(null)
   const [tunerActive, setTunerActive] = useState(false)
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const creakAudioRef = useRef<HTMLAudioElement | null>(null)
 
-  // Which _(open) images are available
+  // Which _(open) images are available (desktop only)
   const [openImageAvailable, setOpenImageAvailable] = useState<Record<string, boolean>>({})
 
-  // ── Preload closed layers on mount; defer open variants ──
-  useEffect(() => {
-    // Preload the closed layers (the visible base map) — use WebP
-    ALL_LAYER_FILES.forEach(file => {
-      preloadImage(`/images/kitchen/${file}.webp`)
-    })
+  // ── Refs for stable hover callback (desktop fix) ──
+  const hoveredRef = useRef(hoveredGroupPrimary)
+  const activeRef = useRef(activeZoneId)
+  useEffect(() => { hoveredRef.current = hoveredGroupPrimary }, [hoveredGroupPrimary])
+  useEffect(() => { activeRef.current = activeZoneId }, [activeZoneId])
 
-    // Only *probe* which open images exist (lightweight HEAD-style check)
-    // but don't preload them yet — that happens on first hover
+  // ── Preload closed layers (desktop) + probe open variants (both) ──
+  useEffect(() => {
+    // Desktop: preload the closed layers (visible base map)
+    if (!isMobile) {
+      ALL_LAYER_FILES.forEach(file => {
+        preloadImage(`/images/kitchen/${file}.webp`)
+      })
+    }
+
+    // Both: probe which open images exist (mobile uses /mobile/ path)
+    const base = isMobile ? '/images/kitchen/mobile' : '/images/kitchen'
     const clickableIds = KITCHEN_ZONES.filter(z => z.clickable).map(z => z.id)
     const results: Record<string, boolean> = {}
     Promise.all(
       clickableIds.map(id => {
-        const src = `/images/kitchen/${id}_(open).webp`
+        const src = `${base}/${id}_(open).webp`
         return preloadImage(src).then(exists => { results[id] = exists })
       })
     ).then(() => {
       setOpenImageAvailable(results)
     })
-  }, [])
+  }, [isMobile])
 
-  // ── Creak audio ──
+  // ── Creak audio (desktop only) ──
   useEffect(() => {
+    if (isMobile) return // No hover on mobile = no sound needed
+
     const audio = new Audio('/sounds/creak.mp3')
     audio.volume = 0.2
     audio.preload = 'auto'
     audio.addEventListener('error', () => { creakAudioRef.current = null })
     creakAudioRef.current = audio
     return () => { audio.pause() }
-  }, [])
+  }, [isMobile])
 
   const playCreak = useCallback(() => {
     const audio = creakAudioRef.current
@@ -115,28 +119,23 @@ export default function KitchenNavigator({ items, locations, canEdit = false }: 
   }, [])
 
   // ── Derived sets ──
-  // The set of zone ids whose images should show as "open".
-  // This is the union of:
-  //   • the active (clicked) group
-  //   • the hovered group (if different from active)
   const openZoneIds = useMemo(() => {
     const s = new Set<string>()
+    // Both mobile and desktop: active (clicked/tapped) group shows open
     if (activeZoneId) {
       getGroupSet(activeZoneId).forEach(id => s.add(id))
     }
-    if (hoveredGroupPrimary) {
+    // Desktop only: hovered group also shows open
+    if (!isMobile && hoveredGroupPrimary) {
       getGroupSet(hoveredGroupPrimary).forEach(id => s.add(id))
     }
     return s
-  }, [activeZoneId, hoveredGroupPrimary])
+  }, [activeZoneId, hoveredGroupPrimary, isMobile])
 
-  // The set of zone ids that should show the hover highlight
-  // (scale-up, background tint).  Only the hovered group, not
-  // the active-but-not-hovered group.
   const highlightedZoneIds = useMemo(() => {
-    if (!hoveredGroupPrimary) return new Set<string>()
+    if (isMobile || !hoveredGroupPrimary) return new Set<string>()
     return getGroupSet(hoveredGroupPrimary)
-  }, [hoveredGroupPrimary])
+  }, [hoveredGroupPrimary, isMobile])
 
   // ── Location lookups ──
   const locationNameToId = useMemo(() => {
@@ -176,27 +175,17 @@ export default function KitchenNavigator({ items, locations, canEdit = false }: 
   function handleZoneClick(zone: KitchenZone) {
     if (!zone.clickable) return
     const resolvedId = toPrimary(zone.id)
-    // Toggle: clicking the same group again closes it
     setActiveZoneId(prev => prev === resolvedId ? null : resolvedId)
   }
 
-  // ── Hover handlers ──
-  // We track hover at the *group* level.  Moving the mouse from
-  // B1 to C1 (same group) is a no-op: no sound, no animation
-  // restart.  Moving from B1 to D1 is a new group, so we play
-  // the creak and update.
-const handleHoverEnter = useCallback((zoneId: string) => {
-  const primary = toPrimary(zoneId)
-  
-  // Only play sound if this is a different group than the one currently being hovered
-  // AND it's not the active group
-  if (primary !== hoveredGroupPrimary && primary !== activeZoneId) {
-    playCreak()
-  }
-  
-  // Always update the hover state
-  setHoveredGroupPrimary(primary)
-}, [playCreak, hoveredGroupPrimary, activeZoneId])
+  // ── Hover handlers (desktop only — uses refs for stable callback) ──
+  const handleHoverEnter = useCallback((zoneId: string) => {
+    const primary = toPrimary(zoneId)
+    if (primary !== hoveredRef.current && primary !== activeRef.current) {
+      playCreak()
+    }
+    setHoveredGroupPrimary(primary)
+  }, [playCreak])
 
   const handleHoverLeave = useCallback(() => {
     setHoveredGroupPrimary(null)
@@ -210,10 +199,13 @@ const handleHoverEnter = useCallback((zoneId: string) => {
   const primaryClickableZones = useMemo(() => clickableZones.filter(z => !z.opensAs), [clickableZones])
   const aliasZones = useMemo(() => clickableZones.filter(z => z.opensAs), [clickableZones])
 
+  // ── Image base path ──
+  const imgBase = isMobile ? '/images/kitchen/mobile' : '/images/kitchen'
+
   return (
     <div className="flex flex-col gap-6">
-      {/* Editor tuner toggle */}
-      {canEdit && (
+      {/* Editor tuner toggle — desktop only */}
+      {canEdit && !isMobile && (
         <div className="flex justify-end mb-2">
           <button
             onClick={() => setTunerActive(prev => !prev)}
@@ -231,13 +223,45 @@ const handleHoverEnter = useCallback((zoneId: string) => {
 
       {/* Kitchen Map with PNG overlays */}
       <div ref={mapContainerRef} className="relative w-full" style={{ aspectRatio: '2388 / 1668' }}>
-        {/* All image layers — WebP with PNG fallback, cross-fade open variants */}
+        {/* Image layers */}
         {ALL_LAYER_FILES.map(file => {
+          if (isMobile) {
+            // ── MOBILE: closed image + open variant cross-fade on tap ──
+            const shouldOpen = openZoneIds.has(file) && openImageAvailable[file]
+
+            return (
+              <React.Fragment key={file}>
+                <picture className="absolute inset-0 w-full h-full pointer-events-none select-none" style={{ opacity: shouldOpen ? 0 : 1, transition: 'opacity 200ms' }}>
+                  <source srcSet={`${imgBase}/${file}.webp`} type="image/webp" />
+                  <img
+                    src={`/images/kitchen/${file}.png`}
+                    alt=""
+                    className="w-full h-full object-contain dark:invert"
+                    draggable={false}
+                    loading="lazy"
+                  />
+                </picture>
+                {openImageAvailable[file] && (
+                  <picture className="absolute inset-0 w-full h-full pointer-events-none select-none" style={{ opacity: shouldOpen ? 1 : 0, transition: 'opacity 200ms' }}>
+                    <source srcSet={`${imgBase}/${file}_(open).webp`} type="image/webp" />
+                    <img
+                      src={`/images/kitchen/${file}_(open).png`}
+                      alt=""
+                      className="w-full h-full object-contain dark:invert"
+                      draggable={false}
+                      loading="lazy"
+                    />
+                  </picture>
+                )}
+              </React.Fragment>
+            )
+          }
+
+          // ── DESKTOP: closed + open variant with cross-fade ──
           const shouldOpen = openZoneIds.has(file) && openImageAvailable[file] && !tunerActive
 
           return (
             <React.Fragment key={file}>
-              {/* Closed image */}
               <picture className="absolute inset-0 w-full h-full pointer-events-none select-none" style={{ opacity: shouldOpen ? 0 : 1, transition: 'opacity 200ms' }}>
                 <source srcSet={`/images/kitchen/${file}.webp`} type="image/webp" />
                 <img
@@ -247,7 +271,6 @@ const handleHoverEnter = useCallback((zoneId: string) => {
                   draggable={false}
                 />
               </picture>
-              {/* Open variant (only rendered when known to exist) */}
               {openImageAvailable[file] && (
                 <picture className="absolute inset-0 w-full h-full pointer-events-none select-none" style={{ opacity: shouldOpen ? 1 : 0, transition: 'opacity 200ms' }}>
                   <source srcSet={`/images/kitchen/${file}_(open).webp`} type="image/webp" />
@@ -269,13 +292,56 @@ const handleHoverEnter = useCallback((zoneId: string) => {
           const isActive = toPrimary(activeZoneId || '') === zone.id
           const isHovered = highlightedZoneIds.has(zone.id)
 
+          if (isMobile) {
+            // ── MOBILE: pure click targets, no transitions/transforms/hover ──
+            return (
+              <div
+                key={zone.id}
+                onClick={() => handleZoneClick(zone)}
+                className="absolute cursor-pointer"
+                style={{
+                  left: `${zone.x}%`,
+                  top: `${zone.y}%`,
+                  width: `${zone.w}%`,
+                  height: `${zone.h}%`,
+                  zIndex: isActive ? 20 : 10,
+                  borderRadius: '4px',
+                  outline: isActive ? '2px solid hsl(var(--primary))' : 'none',
+                  background: isActive ? 'hsla(var(--primary), 0.15)' : 'transparent',
+                }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') handleZoneClick(zone) }}
+                aria-label={`${zone.label} - ${count} item${count !== 1 ? 's' : ''}`}
+              >
+                {count > 0 && (
+                  <div
+                    className="absolute flex items-center justify-center rounded-full text-[10px] font-bold pointer-events-none"
+                    style={{
+                      top: '-4px',
+                      right: '-4px',
+                      width: '18px',
+                      height: '18px',
+                      background: 'hsl(var(--primary))',
+                      color: 'hsl(var(--primary-foreground))',
+                      zIndex: 25,
+                    }}
+                  >
+                    {count}
+                  </div>
+                )}
+              </div>
+            )
+          }
+
+          // ── DESKTOP: full hover experience ──
           return (
             <div
               key={zone.id}
               onClick={() => handleZoneClick(zone)}
               onMouseEnter={() => handleHoverEnter(zone.id)}
               onMouseLeave={handleHoverLeave}
-              className="absolute cursor-pointer transition-all duration-200"
+              className="absolute cursor-pointer transition-[transform,background,outline] duration-200"
               style={{
                 left: `${zone.x}%`,
                 top: `${zone.y}%`,
@@ -299,7 +365,6 @@ const handleHoverEnter = useCallback((zoneId: string) => {
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') handleZoneClick(zone) }}
               aria-label={`${zone.label} - ${count} item${count !== 1 ? 's' : ''}`}
             >
-              {/* Tooltip on hover */}
               {isHovered && (
                 <div
                   className="absolute z-30 px-2 py-1 rounded text-xs font-medium shadow-lg whitespace-nowrap pointer-events-none"
@@ -316,7 +381,6 @@ const handleHoverEnter = useCallback((zoneId: string) => {
                 </div>
               )}
 
-              {/* Item count badge */}
               {count > 0 && (
                 <div
                   className="absolute flex items-center justify-center rounded-full text-[10px] font-bold pointer-events-none"
@@ -337,8 +401,8 @@ const handleHoverEnter = useCallback((zoneId: string) => {
           )
         })}
 
-        {/* ── Alias zone hotspots (grouped partners) ── */}
-        {!tunerActive && aliasZones.map(zone => {
+        {/* ── Alias zone hotspots (desktop only — no hover on mobile means aliases are unnecessary) ── */}
+        {!isMobile && !tunerActive && aliasZones.map(zone => {
           const isHovered = highlightedZoneIds.has(zone.id)
           const isActive = toPrimary(activeZoneId || '') === toPrimary(zone.id)
 
@@ -348,7 +412,7 @@ const handleHoverEnter = useCallback((zoneId: string) => {
               onClick={() => handleZoneClick(zone)}
               onMouseEnter={() => handleHoverEnter(zone.id)}
               onMouseLeave={handleHoverLeave}
-              className="absolute cursor-pointer transition-all duration-200"
+              className="absolute cursor-pointer transition-[transform,background,outline] duration-200"
               style={{
                 left: `${zone.x}%`,
                 top: `${zone.y}%`,
@@ -375,12 +439,14 @@ const handleHoverEnter = useCallback((zoneId: string) => {
           )
         })}
 
-        {/* Fine-tuner overlay */}
-        {tunerActive && <ZoneFineTuner containerRef={mapContainerRef} />}
+        {/* Fine-tuner overlay (desktop only) */}
+        {!isMobile && tunerActive && <ZoneFineTuner containerRef={mapContainerRef} />}
       </div>
 
       <p className="text-xs text-[hsl(var(--muted-foreground))] text-center">
-        Click on a cabinet or drawer to see what&apos;s inside. Hover to see item counts.
+        {isMobile
+          ? 'Tap on a cabinet or drawer to see what\u2019s inside.'
+          : 'Click on a cabinet or drawer to see what\u2019s inside. Hover to see item counts.'}
       </p>
 
       {/* Detail panel below the map */}
