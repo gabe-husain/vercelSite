@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { isEditor } from "@/src/lib/auth";
+import { getCanEdit } from "@/src/lib/queries";
 
 export default async function MyInvLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const canEdit = await isEditor();
+  const canEdit = await getCanEdit();
 
   return (
     <section>

@@ -76,19 +76,20 @@ export default function KitchenNavigator({ items, locations, canEdit = false }: 
   // Which _(open) images are available
   const [openImageAvailable, setOpenImageAvailable] = useState<Record<string, boolean>>({})
 
-  // ── Preload all images on mount ──
+  // ── Preload closed layers on mount; defer open variants ──
   useEffect(() => {
-    // 1. Preload every closed layer
+    // Preload the closed layers (the visible base map) — use WebP
     ALL_LAYER_FILES.forEach(file => {
-      preloadImage(`/images/kitchen/${file}.png`)
+      preloadImage(`/images/kitchen/${file}.webp`)
     })
 
-    // 2. Probe + preload every open variant
+    // Only *probe* which open images exist (lightweight HEAD-style check)
+    // but don't preload them yet — that happens on first hover
     const clickableIds = KITCHEN_ZONES.filter(z => z.clickable).map(z => z.id)
     const results: Record<string, boolean> = {}
     Promise.all(
       clickableIds.map(id => {
-        const src = `/images/kitchen/${id}_(open).png`
+        const src = `/images/kitchen/${id}_(open).webp`
         return preloadImage(src).then(exists => { results[id] = exists })
       })
     ).then(() => {
@@ -230,29 +231,33 @@ const handleHoverEnter = useCallback((zoneId: string) => {
 
       {/* Kitchen Map with PNG overlays */}
       <div ref={mapContainerRef} className="relative w-full" style={{ aspectRatio: '2388 / 1668' }}>
-        {/* All PNG layers — cross-fade between closed/open variants */}
+        {/* All image layers — WebP with PNG fallback, cross-fade open variants */}
         {ALL_LAYER_FILES.map(file => {
           const shouldOpen = openZoneIds.has(file) && openImageAvailable[file] && !tunerActive
 
           return (
             <React.Fragment key={file}>
               {/* Closed image */}
-              <img
-                src={`/images/kitchen/${file}.png`}
-                alt=""
-                className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none dark:invert transition-opacity duration-200"
-                style={{ opacity: shouldOpen ? 0 : 1 }}
-                draggable={false}
-              />
-              {/* Open variant (only rendered when known to exist) */}
-              {openImageAvailable[file] && (
+              <picture className="absolute inset-0 w-full h-full pointer-events-none select-none" style={{ opacity: shouldOpen ? 0 : 1, transition: 'opacity 200ms' }}>
+                <source srcSet={`/images/kitchen/${file}.webp`} type="image/webp" />
                 <img
-                  src={`/images/kitchen/${file}_(open).png`}
+                  src={`/images/kitchen/${file}.png`}
                   alt=""
-                  className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none dark:invert transition-opacity duration-200"
-                  style={{ opacity: shouldOpen ? 1 : 0 }}
+                  className="w-full h-full object-contain dark:invert"
                   draggable={false}
                 />
+              </picture>
+              {/* Open variant (only rendered when known to exist) */}
+              {openImageAvailable[file] && (
+                <picture className="absolute inset-0 w-full h-full pointer-events-none select-none" style={{ opacity: shouldOpen ? 1 : 0, transition: 'opacity 200ms' }}>
+                  <source srcSet={`/images/kitchen/${file}_(open).webp`} type="image/webp" />
+                  <img
+                    src={`/images/kitchen/${file}_(open).png`}
+                    alt=""
+                    className="w-full h-full object-contain dark:invert"
+                    draggable={false}
+                  />
+                </picture>
               )}
             </React.Fragment>
           )

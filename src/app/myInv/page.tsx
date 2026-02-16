@@ -1,9 +1,9 @@
 import "@/src/styles/TextPage.css";
 import Link from "next/link";
-import { isEditor } from "@/src/lib/auth";
+import { getCanEdit } from "@/src/lib/queries";
 
 export default async function MyInv() {
-  const canEdit = await isEditor();
+  const canEdit = await getCanEdit();
 
   return (
     <div className="w-[90%] sm:w-[85%] lg:w-[80%] mx-auto py-6 sm:py-8">

@@ -24,6 +24,7 @@ const Preload = () => {
     <>
       {/* Preconnect to critical domains */}
       <link rel="preconnect" href="https://vitals.vercel-insights.com" />
+      <link rel="preconnect" href="https://nnkwfuydutqmgvviqjtd.supabase.co" />
       {/* DNS prefetch for secondary resources */}
       <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
     </>

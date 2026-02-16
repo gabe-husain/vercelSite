@@ -1,21 +1,16 @@
 import "@/src/styles/TextPage.css";
-import { createClient } from "@/utils/supabase/server";
-import { isEditor } from "@/src/lib/auth";
 import { redirect } from "next/navigation";
 import LocationManager from "@/src/components/myInv/LocationManager";
+import { getCanEdit, getLocations } from "@/src/lib/queries";
 
 export default async function LocationsPage() {
-  const canEdit = await isEditor();
+  const canEdit = await getCanEdit();
 
   if (!canEdit) {
     redirect('/myInv');
   }
 
-  const supabase = await createClient();
-  const { data: locations } = await supabase
-    .from('locations')
-    .select('*')
-    .order('name');
+  const locations = await getLocations();
 
   return (
     <div className="w-[90%] sm:w-[85%] lg:w-[80%] mx-auto py-6 sm:py-8">
@@ -23,7 +18,7 @@ export default async function LocationsPage() {
       <p className="textBody" style={{ marginBottom: '1.5rem' }}>
         Add, edit, or remove storage locations in your kitchen.
       </p>
-      <LocationManager locations={locations || []} />
+      <LocationManager locations={locations} />
     </div>
   );
 }
