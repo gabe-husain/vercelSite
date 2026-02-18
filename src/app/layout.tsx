@@ -4,6 +4,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import Navbar from "../components/layout/Navbar";
 import Link from "next/link";
 import { Metadata } from "next";
+import "@/src/app/globals.css";
 
 export const metadata: Metadata = {
   title: {
@@ -26,7 +27,6 @@ const Preload = () => {
       <link rel="preconnect" href="https://vitals.vercel-insights.com" />
       <link rel="preconnect" href="https://nnkwfuydutqmgvviqjtd.supabase.co" />
       {/* DNS prefetch for secondary resources */}
-      <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
     </>
   );
 };

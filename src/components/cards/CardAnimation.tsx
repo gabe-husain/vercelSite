@@ -1,12 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
-}
+import { useEffect, useRef, useState } from "react";
 
 interface CardAnimationProps {
   children: React.ReactNode;
@@ -15,64 +9,32 @@ interface CardAnimationProps {
 
 export default function CardAnimation({ children, index }: CardAnimationProps) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     const element = cardRef.current;
-    
     if (!element) return;
 
-    // Initial entrance animation
-    gsap.set(element, {
-      opacity: 0,
-      x: 50,
-    });
-
-    gsap.to(element, {
-      opacity: 1,
-      x: 0,
-      duration: 0.8,
-      delay: index * 0.1,
-      ease: "power2.out",
-      scrollTrigger: {
-        trigger: element,
-        start: "top bottom-=100",
-        toggleActions: "play none none none",
-        once: true,
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.unobserve(element);
+        }
       },
-    });
+      { rootMargin: '0px 0px -100px 0px' }
+    );
 
-    // Hover animations
-    const card = element.querySelector('.deck-card');
-    if (!card) return;
-
-    // Create hover animation timeline (but don't play it yet)
-    const hoverTimeline = gsap.timeline({ paused: true })
-      .to(card, {
-        scale: 1.02,
-        boxShadow: "0 10px 20px rgba(0,0,0,0.15)",
-        duration: 0.3,
-        ease: "power2.out"
-      });
-
-    // Add hover event listeners
-    element.addEventListener('mouseenter', () => {
-      hoverTimeline.play();
-    });
-
-    element.addEventListener('mouseleave', () => {
-      hoverTimeline.reverse();
-    });
-
-    // Cleanup
-    return () => {
-      const trigger = ScrollTrigger.getById(element.id);
-      if (trigger) trigger.kill();
-      hoverTimeline.kill();
-    };
-  }, [index]);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <div ref={cardRef} style={{ width: '100%' }}>
+    <div
+      ref={cardRef}
+      className={`card-animate ${isVisible ? 'card-animate--visible' : ''}`}
+      style={{ transitionDelay: `${index * 100}ms` }}
+    >
       {children}
     </div>
   );

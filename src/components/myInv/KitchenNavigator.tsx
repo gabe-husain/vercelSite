@@ -67,8 +67,9 @@ export default function KitchenNavigator({ items, locations, canEdit = false }: 
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const creakAudioRef = useRef<HTMLAudioElement | null>(null)
 
-  // Which _(open) images are available (desktop only)
+  // Which _(open) images are available — probed on-demand per zone
   const [openImageAvailable, setOpenImageAvailable] = useState<Record<string, boolean>>({})
+  const probeInFlight = useRef<Set<string>>(new Set())
 
   // ── Refs for stable hover callback (desktop fix) ──
   const hoveredRef = useRef(hoveredGroupPrimary)
@@ -76,28 +77,20 @@ export default function KitchenNavigator({ items, locations, canEdit = false }: 
   useEffect(() => { hoveredRef.current = hoveredGroupPrimary }, [hoveredGroupPrimary])
   useEffect(() => { activeRef.current = activeZoneId }, [activeZoneId])
 
-  // ── Preload closed layers (desktop) + probe open variants (both) ──
-  useEffect(() => {
-    // Desktop: preload the closed layers (visible base map)
-    if (!isMobile) {
-      ALL_LAYER_FILES.forEach(file => {
-        preloadImage(`/images/kitchen/${file}.webp`)
-      })
-    }
+  // ── On-demand open-image probing (replaces bulk preload) ──
+  const probeOpenImage = useCallback((zoneId: string) => {
+    if (openImageAvailable[zoneId] !== undefined) return
+    if (probeInFlight.current.has(zoneId)) return
 
-    // Both: probe which open images exist (mobile uses /mobile/ path)
+    probeInFlight.current.add(zoneId)
     const base = isMobile ? '/images/kitchen/mobile' : '/images/kitchen'
-    const clickableIds = KITCHEN_ZONES.filter(z => z.clickable).map(z => z.id)
-    const results: Record<string, boolean> = {}
-    Promise.all(
-      clickableIds.map(id => {
-        const src = `${base}/${id}_(open).webp`
-        return preloadImage(src).then(exists => { results[id] = exists })
-      })
-    ).then(() => {
-      setOpenImageAvailable(results)
+    const src = `${base}/${zoneId}_(open).webp`
+
+    preloadImage(src).then(exists => {
+      probeInFlight.current.delete(zoneId)
+      setOpenImageAvailable(prev => ({ ...prev, [zoneId]: exists }))
     })
-  }, [isMobile])
+  }, [isMobile, openImageAvailable])
 
   // ── Creak audio (desktop only) ──
   useEffect(() => {
@@ -175,6 +168,8 @@ export default function KitchenNavigator({ items, locations, canEdit = false }: 
   function handleZoneClick(zone: KitchenZone) {
     if (!zone.clickable) return
     const resolvedId = toPrimary(zone.id)
+    // Probe open images on click (critical for mobile which has no hover)
+    getGroupSet(zone.id).forEach(id => probeOpenImage(id))
     setActiveZoneId(prev => prev === resolvedId ? null : resolvedId)
   }
 
@@ -185,7 +180,9 @@ export default function KitchenNavigator({ items, locations, canEdit = false }: 
       playCreak()
     }
     setHoveredGroupPrimary(primary)
-  }, [playCreak])
+    // Probe open images for this group on hover so they're cached before click
+    getGroupSet(zoneId).forEach(id => probeOpenImage(id))
+  }, [playCreak, probeOpenImage])
 
   const handleHoverLeave = useCallback(() => {
     setHoveredGroupPrimary(null)
