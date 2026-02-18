@@ -21,8 +21,20 @@ type ParsedCommand =
   | { type: 'undo' }
   | { type: 'list'; zone?: string }
   | { type: 'list-all' }
+  | { type: 'search-names' }
   | { type: 'help' }
   | { type: 'unknown' }
+
+// ── Found item with match source ─────────────────────────────
+type FoundItem = {
+  id: number
+  name: string
+  quantity: number
+  location_id: number
+  notes: string | null
+  location: unknown
+  matchedVia: 'name-exact' | 'name-partial' | 'notes'
+}
 
 // ── Undo types ───────────────────────────────────────────────
 type UndoAction =
@@ -30,9 +42,9 @@ type UndoAction =
   | { type: 'delete'; itemId: number; description: string }
   | { type: 'revert-quantity'; itemId: number; previousQuantity: number; description: string }
 
-// Module-level undo store — persists across warm invocations on Vercel.
-// Lost on cold start, which is acceptable for single-level undo.
+// Module-level stores — persist across warm invocations on Vercel.
 const undoStore = new Map<number, UndoAction>()
+const lastSearchStore = new Map<number, { query: string; results: FoundItem[] }>()
 
 // ── Message parser ───────────────────────────────────────────
 // Utterance patterns inspired by the Alexa skill interaction model
@@ -50,14 +62,17 @@ function parseMessage(text: string): ParsedCommand {
     return { type: 'help' }
   }
 
+  // ── Search follow-up: "names" ──
+  if (/^names?$/i.test(t)) {
+    return { type: 'search-names' }
+  }
+
   // ── List all ──
-  // "list all items", "show everything", "what do I have", "full inventory", "inventory report"
   if (/^(?:list\s+all(?:\s+items)?|show\s+(?:everything|all(?:\s+items)?)|what\s+do\s+I\s+have|(?:full\s+)?inventory(?:\s+report)?|list\s+everything)$/i.test(t)) {
     return { type: 'list-all' }
   }
 
   // ── List location ──
-  // "list N2", "what's in N2", "what is in A1", "show me B2", "open D1"
   const listMatch =
     t.match(/^list\s+(\w+)$/i) ||
     t.match(/^what(?:'s|\s+is)\s+in\s+(\w+)$/i) ||
@@ -73,8 +88,6 @@ function parseMessage(text: string): ParsedCommand {
   }
 
   // ── Check / find item ──
-  // "how many eggs do I have", "how much milk do I have", "check eggs",
-  // "find eggs", "where is the milk", "where are the eggs", "do I have eggs"
   const checkMatch =
     t.match(/^how\s+(?:many|much)\s+(.+?)\s+do\s+I\s+have$/i) ||
     t.match(/^(?:check|find)\s+(?:the\s+)?(.+)$/i) ||
@@ -85,12 +98,10 @@ function parseMessage(text: string): ParsedCommand {
   }
 
   // ── Update quantity ──
-  // "set eggs to 5", "update milk to 3", "change rice to 2", "I have 5 eggs"
   const updateMatch =
     t.match(/^(?:set|update|change)\s+(.+?)\s+to\s+(\d+)$/i) ||
     t.match(/^I\s+have\s+(\d+)\s+(.+)$/i)
   if (updateMatch) {
-    // "I have 5 eggs" captures (quantity, item) — swap order
     const firstIsNumber = /^\d+$/.test(updateMatch[1])
     const itemName = firstIsNumber ? updateMatch[2].trim() : updateMatch[1].trim()
     const quantity = parseInt(firstIsNumber ? updateMatch[1] : updateMatch[2], 10)
@@ -98,8 +109,6 @@ function parseMessage(text: string): ParsedCommand {
   }
 
   // ── Remove (with optional location) ──
-  // "finished (the) X", "used (up) (the) X", "out of (the) X", "no more X"
-  // "remove X (from ZONE)", "delete X (from ZONE)", "take out X (from ZONE)", "take X out of ZONE"
   const removeFromMatch =
     t.match(/^(?:remove|delete)\s+(?:the\s+)?(.+?)\s+from\s+(\w+)$/i) ||
     t.match(/^take\s+out\s+(?:the\s+)?(.+?)\s+from\s+(\w+)$/i) ||
@@ -116,8 +125,6 @@ function parseMessage(text: string): ParsedCommand {
   }
 
   // ── Add (with location) ──
-  // "bought/added/got/put/store/place (N) X in/to/at ZONE"
-  // "I put the X in ZONE", "I put N X in ZONE"
   const addMatch =
     t.match(/^(?:bought|added|got|put|store|stored|place|placed)\s+(?:(\d+)\s+)?(.+?)\s+(?:in|to|at)\s+(\w+)$/i) ||
     t.match(/^I\s+(?:bought|added|got|put|stored|placed)\s+(?:(\d+)\s+)?(?:the\s+)?(.+?)\s+(?:in|to|at)\s+(\w+)$/i) ||
@@ -150,23 +157,37 @@ async function resolveZoneToLocation(zoneId: string): Promise<{ locationId: numb
   return { locationId: data.id, locationName: data.name }
 }
 
-// ── Helper: find items by name ───────────────────────────────
-async function findItemsByName(itemName: string) {
-  // Exact match first (case-insensitive)
+// ── Helper: find items by name AND notes ─────────────────────
+// Searches: exact name → partial name → notes → combined & deduplicated.
+// Each result is tagged with how it matched so replies can explain why.
+async function findItems(query: string): Promise<FoundItem[]> {
+  const select = 'id, name, quantity, location_id, notes, location:locations(id, name)'
+
+  // 1. Exact name match — if we get hits, return immediately (highest confidence)
   const { data: exact } = await supabaseAdmin
-    .from('items')
-    .select('id, name, quantity, location_id, notes, location:locations(id, name)')
-    .ilike('name', itemName)
+    .from('items').select(select).ilike('name', query)
+  if (exact && exact.length > 0) {
+    return exact.map(i => ({ ...i, matchedVia: 'name-exact' as const }))
+  }
 
-  if (exact && exact.length > 0) return exact
+  // 2. Partial name match + notes match in parallel
+  const [nameRes, notesRes] = await Promise.all([
+    supabaseAdmin.from('items').select(select).ilike('name', `%${query}%`),
+    supabaseAdmin.from('items').select(select).ilike('notes', `%${query}%`),
+  ])
 
-  // Partial match fallback
-  const { data: partial } = await supabaseAdmin
-    .from('items')
-    .select('id, name, quantity, location_id, notes, location:locations(id, name)')
-    .ilike('name', `%${itemName}%`)
+  // 3. Combine + deduplicate (name matches listed first)
+  const seen = new Set<number>()
+  const results: FoundItem[] = []
 
-  return partial || []
+  for (const i of (nameRes.data || [])) {
+    if (!seen.has(i.id)) { seen.add(i.id); results.push({ ...i, matchedVia: 'name-partial' }) }
+  }
+  for (const i of (notesRes.data || [])) {
+    if (!seen.has(i.id)) { seen.add(i.id); results.push({ ...i, matchedVia: 'notes' }) }
+  }
+
+  return results
 }
 
 function getLocName(item: { location?: unknown }): string {
@@ -174,9 +195,14 @@ function getLocName(item: { location?: unknown }): string {
   return (loc as { name?: string })?.name || 'unknown location'
 }
 
+function matchLabel(via: FoundItem['matchedVia']): string {
+  if (via === 'notes') return ' [in notes]'
+  return ''
+}
+
 // ── Command handlers ─────────────────────────────────────────
 async function handleRemove(itemName: string, chatId: number, zone?: string): Promise<string> {
-  let items = await findItemsByName(itemName)
+  let items = await findItems(itemName)
 
   // If zone specified, filter to that location
   if (zone && items.length > 0) {
@@ -189,7 +215,7 @@ async function handleRemove(itemName: string, chatId: number, zone?: string): Pr
     return `Could not find "${itemName}" in inventory.`
   }
   if (items.length > 1) {
-    const names = items.map(i => `- ${i.name} in ${getLocName(i)}`).join('\n')
+    const names = items.map(i => `- ${i.name} in ${getLocName(i)}${matchLabel(i.matchedVia)}`).join('\n')
     return `Multiple matches for "${itemName}":\n${names}\nPlease be more specific (e.g. "remove ${itemName} from A1").`
   }
 
@@ -209,7 +235,8 @@ async function handleRemove(itemName: string, chatId: number, zone?: string): Pr
     description: `${item.name} restored to ${locationName}`,
   })
 
-  return `${item.name} removed from ${locationName}, type u to undo`
+  const via = item.matchedVia === 'notes' ? ' (matched via notes)' : ''
+  return `${item.name} removed from ${locationName}${via}, type u to undo`
 }
 
 async function handleAdd(itemName: string, quantity: number, zone: string, chatId: number): Promise<string> {
@@ -268,14 +295,14 @@ async function handleAdd(itemName: string, quantity: number, zone: string, chatI
 }
 
 async function handleUpdateQty(itemName: string, quantity: number, chatId: number): Promise<string> {
-  const items = await findItemsByName(itemName)
+  const items = await findItems(itemName)
 
   if (items.length === 0) {
     return `Could not find "${itemName}" in inventory.`
   }
   if (items.length > 1) {
-    const details = items.map(i => `- ${i.name} (x${i.quantity}) in ${getLocName(i)}`).join('\n')
-    return `Found ${itemName} in multiple locations:\n${details}\nPlease remove/add specifically.`
+    const details = items.map(i => `- ${i.name} (x${i.quantity}) in ${getLocName(i)}${matchLabel(i.matchedVia)}`).join('\n')
+    return `Found "${itemName}" in multiple places:\n${details}\nPlease remove/add specifically.`
   }
 
   const item = items[0]
@@ -299,21 +326,83 @@ async function handleUpdateQty(itemName: string, quantity: number, chatId: numbe
   return `Updated ${item.name} in ${locationName}: ${prevQty} → ${quantity}, type u to undo`
 }
 
-async function handleCheck(itemName: string): Promise<string> {
-  const items = await findItemsByName(itemName)
+async function handleCheck(itemName: string, chatId: number): Promise<string> {
+  const items = await findItems(itemName)
 
   if (items.length === 0) {
     return `No "${itemName}" found in inventory.`
   }
+
+  // Single result — show full detail
   if (items.length === 1) {
     const item = items[0]
-    return `You have ${item.quantity} ${item.name} in ${getLocName(item)}.`
+    const loc = getLocName(item)
+    const via = item.matchedVia === 'notes' ? '\n(matched via notes)' : ''
+    const notes = item.notes ? `\nNotes: ${item.notes}` : ''
+    return `You have ${item.quantity} ${item.name} in ${loc}.${notes}${via}`
   }
 
-  // Multiple locations
-  const total = items.reduce((sum, i) => sum + i.quantity, 0)
-  const details = items.map(i => `- ${i.quantity} in ${getLocName(i)}`).join('\n')
-  return `You have ${total} ${itemName} total:\n${details}`
+  // Multiple results — store for follow-up drilling
+  lastSearchStore.set(chatId, { query: itemName, results: items })
+
+  // 2-5 results: show inline
+  if (items.length <= 5) {
+    const lines = items.map(i => {
+      return `- ${i.name} (x${i.quantity}) in ${getLocName(i)}${matchLabel(i.matchedVia)}`
+    })
+    return [
+      `I found ${items.length} mentions of "${itemName}":`,
+      ...lines,
+      '',
+      'Reply with a name or zone to narrow down.',
+    ].join('\n')
+  }
+
+  // 6+ results: summarize, prompt to drill down
+  const zones = Array.from(new Set(items.map(i => getLocName(i))))
+  const zonePreview = zones.slice(0, 4).join(', ') + (zones.length > 4 ? '...' : '')
+  return [
+    `I found ${items.length} mentions of "${itemName}".`,
+    'Is there a specific location you expect to find them in?',
+    '',
+    `Reply with:`,
+    `• "names" to hear their names`,
+    `• A zone (${zonePreview}) to filter by location`,
+  ].join('\n')
+}
+
+async function handleSearchNames(chatId: number): Promise<string> {
+  const search = lastSearchStore.get(chatId)
+  if (!search) return 'No previous search to show names for.'
+
+  const lines = search.results.map(i => {
+    return `- ${i.name} (x${i.quantity}) in ${getLocName(i)}${matchLabel(i.matchedVia)}`
+  })
+  return [
+    `All ${search.results.length} results for "${search.query}":`,
+    ...lines,
+  ].join('\n')
+}
+
+async function handleSearchFilterZone(chatId: number, zone: string): Promise<string> {
+  const search = lastSearchStore.get(chatId)
+  if (!search) return 'No previous search to filter.'
+
+  const location = await resolveZoneToLocation(zone)
+  if (!location) return `Unknown zone "${zone}".`
+
+  const filtered = search.results.filter(i => i.location_id === location.locationId)
+  if (filtered.length === 0) {
+    return `No results for "${search.query}" in ${zone}.`
+  }
+
+  const lines = filtered.map(i => {
+    return `- ${i.name} (x${i.quantity})${matchLabel(i.matchedVia)}`
+  })
+  return [
+    `${filtered.length} result${filtered.length > 1 ? 's' : ''} for "${search.query}" in ${zone}:`,
+    ...lines,
+  ].join('\n')
 }
 
 async function handleUndo(chatId: number): Promise<string> {
@@ -426,7 +515,7 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
       reply = await handleUpdateQty(command.itemName, command.quantity, chatId)
       break
     case 'check':
-      reply = await handleCheck(command.itemName)
+      reply = await handleCheck(command.itemName, chatId)
       break
     case 'undo':
       reply = await handleUndo(chatId)
@@ -436,6 +525,9 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
       break
     case 'list-all':
       reply = await handleListAll()
+      break
+    case 'search-names':
+      reply = await handleSearchNames(chatId)
       break
     case 'help':
       reply = [
@@ -452,10 +544,11 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
         '• "Remove eggs from A2"',
         '• "Take out bread from B1"',
         '',
-        'Check items:',
+        'Check / find items (searches name + notes):',
         '• "How many eggs do I have"',
         '• "Where is the milk"',
-        '• "Find rice"',
+        '• "Find noodles"',
+        '• "Do I have corn"',
         '',
         'Update quantity:',
         '• "Set eggs to 5"',
@@ -465,19 +558,32 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
         '• "List N2" or "What\'s in A1"',
         '• "List all items" or "Show everything"',
         '',
+        'After a search with multiple results:',
+        '• "names" to see all matched item names',
+        '• A zone like "A2" to filter by location',
+        '',
         '• "u" to undo last action',
       ].join('\n')
       break
-    case 'unknown':
+    case 'unknown': {
+      // Before showing help, check if this is a bare zone ID with a pending search
+      const t = text.trim().toUpperCase()
+      if (/^[A-Z]\d+$/.test(t) && lastSearchStore.has(chatId)) {
+        reply = await handleSearchFilterZone(chatId, t)
+        break
+      }
+
       reply = [
         "I didn't understand that. Try:",
         '• "Bought 5 Bananas in N2"',
         '• "Finished the Dumpling Sauce"',
         '• "How many eggs do I have"',
+        '• "Find noodles" (searches notes too)',
         '• "List N2"',
         '• "help" for all commands',
       ].join('\n')
       break
+    }
   }
 
   await sendReply(chatId, reply)
