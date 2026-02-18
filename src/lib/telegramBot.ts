@@ -1,5 +1,18 @@
 import { supabaseAdmin } from './supabaseAdmin'
 import { KITCHEN_ZONES, ZONE_GROUPS } from './kitchenZones'
+import {
+  applyAutoTags,
+  applyManualTags,
+  applyDictionaryDefaults,
+  computeAutoTags,
+  saveDictionary,
+  getDictionary,
+  deleteDictionary,
+  getTagsForItem,
+  findItemsByTag,
+  getAllTags,
+  removeTagFromItem,
+} from './autoTagger'
 
 // ── Telegram types (minimal) ─────────────────────────────────
 interface TelegramUpdate {
@@ -22,6 +35,15 @@ type ParsedCommand =
   | { type: 'list'; zone?: string }
   | { type: 'list-all' }
   | { type: 'search-names' }
+  | { type: 'tag-search'; tagName: string }
+  | { type: 'list-tags' }
+  | { type: 'list-tags-item'; itemName: string }
+  | { type: 'tag-item'; itemName: string; tagNames: string[] }
+  | { type: 'untag-item'; itemName: string; tagName: string }
+  | { type: 'save-dict'; itemName: string }
+  | { type: 'list-dict' }
+  | { type: 'delete-dict'; itemName: string }
+  | { type: 'skip' }
   | { type: 'help' }
   | { type: 'unknown' }
 
@@ -42,9 +64,18 @@ type UndoAction =
   | { type: 'delete'; itemId: number; description: string }
   | { type: 'revert-quantity'; itemId: number; previousQuantity: number; description: string }
 
+// ── Pending tag prompt ───────────────────────────────────────
+type PendingTagPrompt = {
+  itemId: number
+  itemName: string
+  autoTags: string[]
+  expiresAt: number // Date.now() + 5 minutes
+}
+
 // Module-level stores — persist across warm invocations on Vercel.
 const undoStore = new Map<number, UndoAction>()
 const lastSearchStore = new Map<number, { query: string; results: FoundItem[] }>()
+const pendingTagStore = new Map<number, PendingTagPrompt>()
 
 // ── Message parser ───────────────────────────────────────────
 // Utterance patterns inspired by the Alexa skill interaction model
@@ -62,9 +93,71 @@ function parseMessage(text: string): ParsedCommand {
     return { type: 'help' }
   }
 
+  // ── Skip (tag prompt dismiss) ──
+  if (/^skip$/i.test(t)) {
+    return { type: 'skip' }
+  }
+
   // ── Search follow-up: "names" ──
   if (/^names?$/i.test(t)) {
     return { type: 'search-names' }
+  }
+
+  // ── Tag commands (MUST come before check/find to avoid conflicts) ──
+
+  // "find by tag X" / "search by tag X" / "search tag X"
+  const tagSearchMatch = t.match(/^(?:search|find)\s+(?:by\s+)?tag(?:ged)?\s+(.+)$/i)
+  if (tagSearchMatch) {
+    return { type: 'tag-search', tagName: tagSearchMatch[1].trim() }
+  }
+
+  // "tagged X" (shorthand)
+  const taggedMatch = t.match(/^tagged\s+(.+)$/i)
+  if (taggedMatch) {
+    return { type: 'tag-search', tagName: taggedMatch[1].trim() }
+  }
+
+  // "tags for X" / "tags X" / "tag X" (show tags on item — but NOT "tag X as Y")
+  const tagsItemMatch = t.match(/^tags?\s+(?:for\s+)?(.+)$/i)
+  if (tagsItemMatch && !/\s+(?:as|with)\s+/i.test(tagsItemMatch[1])) {
+    return { type: 'list-tags-item', itemName: tagsItemMatch[1].trim() }
+  }
+
+  // "tags" / "show tags" / "all tags"
+  if (/^(?:show\s+)?(?:all\s+)?tags$/i.test(t)) {
+    return { type: 'list-tags' }
+  }
+
+  // "tag X as Y,Z" / "tag X with Y,Z"
+  const tagItemMatch = t.match(/^tag\s+(.+?)\s+(?:as|with)\s+(.+)$/i)
+  if (tagItemMatch) {
+    const tagNames = tagItemMatch[2].split(',').map(s => s.trim()).filter(Boolean)
+    return { type: 'tag-item', itemName: tagItemMatch[1].trim(), tagNames }
+  }
+
+  // "untag X Y"
+  const untagMatch = t.match(/^untag\s+(.+?)\s+(\S+)$/i)
+  if (untagMatch) {
+    return { type: 'untag-item', itemName: untagMatch[1].trim(), tagName: untagMatch[2].trim() }
+  }
+
+  // ── Dictionary commands ──
+
+  // "save dict X" / "save dictionary X"
+  const saveDictMatch = t.match(/^save\s+dict(?:ionary)?\s+(.+)$/i)
+  if (saveDictMatch) {
+    return { type: 'save-dict', itemName: saveDictMatch[1].trim() }
+  }
+
+  // "delete dict X"
+  const deleteDictMatch = t.match(/^delete\s+dict(?:ionary)?\s+(.+)$/i)
+  if (deleteDictMatch) {
+    return { type: 'delete-dict', itemName: deleteDictMatch[1].trim() }
+  }
+
+  // "dict" / "dictionary" / "saved items"
+  if (/^(?:dict(?:ionary)?|saved\s+items)$/i.test(t)) {
+    return { type: 'list-dict' }
   }
 
   // ── List all ──
@@ -252,7 +345,7 @@ async function handleAdd(itemName: string, quantity: number, zone: string, chatI
   // Check if item already exists in that location
   const { data: existing } = await supabaseAdmin
     .from('items')
-    .select('id, name, quantity')
+    .select('id, name, quantity, notes')
     .ilike('name', itemName)
     .eq('location_id', location.locationId)
     .maybeSingle()
@@ -266,6 +359,9 @@ async function handleAdd(itemName: string, quantity: number, zone: string, chatI
 
     if (error) return `Error updating ${existing.name}: ${error.message}`
 
+    // Re-run auto-tags on update (additive-only)
+    await applyAutoTags(existing.id, existing.name, existing.notes)
+
     undoStore.set(chatId, {
       type: 'revert-quantity',
       itemId: existing.id,
@@ -276,10 +372,14 @@ async function handleAdd(itemName: string, quantity: number, zone: string, chatI
     return `Updated ${existing.name} in ${zone}: ${existing.quantity} → ${newQty}, type u to undo`
   }
 
+  // Check dictionary for defaults BEFORE inserting
+  const dictDefaults = await applyDictionaryDefaults(itemName)
+  const insertNotes = dictDefaults?.notes ?? null
+
   // Insert new item
   const { data: inserted, error } = await supabaseAdmin
     .from('items')
-    .insert({ name: itemName, location_id: location.locationId, quantity, notes: null })
+    .insert({ name: itemName, location_id: location.locationId, quantity, notes: insertNotes })
     .select('id')
     .single()
 
@@ -291,7 +391,42 @@ async function handleAdd(itemName: string, quantity: number, zone: string, chatI
     description: `${itemName} removed from ${zone}`,
   })
 
-  return `Added ${quantity} ${itemName} to ${zone}, type u to undo`
+  // Apply auto-tags
+  await applyAutoTags(inserted.id, itemName, insertNotes)
+  const autoTags = computeAutoTags(itemName, insertNotes)
+
+  // If dictionary match found — apply dictionary tags too, no tag prompt needed
+  if (dictDefaults) {
+    if (dictDefaults.tags && dictDefaults.tags.length > 0) {
+      await applyManualTags(inserted.id, dictDefaults.tags, 'dictionary')
+    }
+    const allTags = Array.from(new Set([...autoTags, ...(dictDefaults.tags ?? [])]))
+    const tagLine = allTags.length > 0 ? `\nTagged: ${allTags.join(', ')}` : ''
+    const notesLine = insertNotes ? `\nNotes (from dictionary): ${insertNotes}` : ''
+    return `Added ${quantity} ${itemName} to ${zone}, type u to undo${tagLine}${notesLine}`
+  }
+
+  // No dictionary match — set pending tag prompt
+  pendingTagStore.set(chatId, {
+    itemId: inserted.id,
+    itemName,
+    autoTags,
+    expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+  })
+
+  if (autoTags.length > 0) {
+    return [
+      `Added ${quantity} ${itemName} to ${zone}, type u to undo`,
+      `Auto-tagged: ${autoTags.join(', ')}`,
+      `Reply with extra tags (comma-separated) or "skip"`,
+    ].join('\n')
+  }
+
+  return [
+    `Added ${quantity} ${itemName} to ${zone}, type u to undo`,
+    `No auto-tags matched.`,
+    `Reply with tags (comma-separated) or "skip"`,
+  ].join('\n')
 }
 
 async function handleUpdateQty(itemName: string, quantity: number, chatId: number): Promise<string> {
@@ -472,6 +607,132 @@ async function handleListAll(): Promise<string> {
   return `Full inventory (${items.length} items):\n${lines.join('\n')}`
 }
 
+// ── Tag & Dictionary handlers ────────────────────────────────
+
+async function handleTagSearch(tagName: string): Promise<string> {
+  const items = await findItemsByTag(tagName)
+  if (items.length === 0) {
+    return `No items tagged with "${tagName}".`
+  }
+
+  const lines = items.map(i => `- ${i.name} (x${i.quantity}) in ${i.locationName}`)
+  return [
+    `Items tagged "${tagName}" (${items.length}):`,
+    ...lines,
+  ].join('\n')
+}
+
+async function handleListTagsCmd(): Promise<string> {
+  const tags = await getAllTags()
+  if (tags.length === 0) return 'No tags exist yet.'
+
+  // Group by category
+  const grouped = new Map<string, { name: string; count: number }[]>()
+  for (const tag of tags) {
+    const list = grouped.get(tag.category) ?? []
+    list.push({ name: tag.name, count: tag.count })
+    grouped.set(tag.category, list)
+  }
+
+  const lines: string[] = ['All tags:']
+  grouped.forEach((tagList, category) => {
+    const tagStrs = tagList.map(t => t.count > 0 ? `${t.name} (${t.count})` : t.name)
+    lines.push(`[${category}] ${tagStrs.join(', ')}`)
+  })
+
+  return lines.join('\n')
+}
+
+async function handleListTagsItem(itemName: string): Promise<string> {
+  const items = await findItems(itemName)
+  if (items.length === 0) return `No item found matching "${itemName}".`
+  if (items.length > 1) {
+    return `Multiple matches for "${itemName}". Be more specific.`
+  }
+
+  const item = items[0]
+  const tags = await getTagsForItem(item.id)
+
+  if (tags.length === 0) {
+    return `${item.name} has no tags.`
+  }
+
+  const tagStrs = tags.map(t => `${t.name} (${t.source})`)
+  return `Tags for ${item.name}: ${tagStrs.join(', ')}`
+}
+
+async function handleTagItem(itemName: string, tagNames: string[]): Promise<string> {
+  const items = await findItems(itemName)
+  if (items.length === 0) return `No item found matching "${itemName}".`
+  if (items.length > 1) {
+    return `Multiple matches for "${itemName}". Be more specific.`
+  }
+
+  const item = items[0]
+  await applyManualTags(item.id, tagNames, 'manual')
+  return `Tagged ${item.name} with: ${tagNames.join(', ')}`
+}
+
+async function handleUntagItem(itemName: string, tagName: string): Promise<string> {
+  const items = await findItems(itemName)
+  if (items.length === 0) return `No item found matching "${itemName}".`
+  if (items.length > 1) {
+    return `Multiple matches for "${itemName}". Be more specific.`
+  }
+
+  const item = items[0]
+  const result = await removeTagFromItem(item.id, tagName)
+  if (!result.success) return result.error || 'Error removing tag.'
+  return `Removed tag "${tagName}" from ${item.name}.`
+}
+
+async function handleSaveDictCmd(itemName: string): Promise<string> {
+  const items = await findItems(itemName)
+  if (items.length === 0) return `No item named "${itemName}" in inventory. Add it first.`
+  if (items.length > 1) return `Multiple matches for "${itemName}". Be more specific.`
+
+  const item = items[0]
+  const tags = await getTagsForItem(item.id)
+  const tagNames = tags.map(t => t.name)
+  const zoneName = getLocName(item)
+
+  const result = await saveDictionary({
+    itemName: item.name,
+    defaultNotes: item.notes,
+    defaultZone: zoneName,
+    defaultTags: tagNames,
+  })
+
+  if (!result.success) return `Error saving to dictionary: ${result.error}`
+
+  const parts = [`Saved "${item.name}" to dictionary`]
+  if (tagNames.length > 0) parts.push(`tags: [${tagNames.join(', ')}]`)
+  if (zoneName) parts.push(`zone: ${zoneName}`)
+  if (item.notes) parts.push(`notes: ${item.notes}`)
+  return parts.join(', ')
+}
+
+async function handleListDictCmd(): Promise<string> {
+  const entries = await getDictionary()
+  if (entries.length === 0) return 'Dictionary is empty. Use "save dict <item>" to save an item as a template.'
+
+  const lines = entries.map(e => {
+    const parts = [`- ${e.item_name}`]
+    if (e.default_zone) parts.push(`zone: ${e.default_zone}`)
+    if (e.default_tags.length > 0) parts.push(`tags: [${e.default_tags.join(', ')}]`)
+    if (e.default_notes) parts.push(`notes: ${e.default_notes}`)
+    return parts.join(' | ')
+  })
+
+  return `Personal Dictionary (${entries.length}):\n${lines.join('\n')}`
+}
+
+async function handleDeleteDictCmd(itemName: string): Promise<string> {
+  const result = await deleteDictionary(itemName)
+  if (!result.success) return `Error deleting from dictionary: ${result.error}`
+  return `Removed "${itemName}" from dictionary.`
+}
+
 // ── Telegram reply helper ────────────────────────────────────
 async function sendReply(chatId: number, text: string): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN!
@@ -501,6 +762,39 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
     return
   }
 
+  // ── Pending tag prompt handling ──
+  // If there's a pending tag prompt for this chat, handle it before parsing as normal command
+  const pending = pendingTagStore.get(chatId)
+  if (pending) {
+    // Check expiration (5 min)
+    if (Date.now() > pending.expiresAt) {
+      pendingTagStore.delete(chatId)
+      // Fall through to normal command parsing
+    } else if (/^skip$/i.test(text.trim())) {
+      pendingTagStore.delete(chatId)
+      await sendReply(chatId, 'Skipped tagging.')
+      return
+    } else {
+      // Check if user sent a real command instead of tags
+      const maybeCommand = parseMessage(text)
+      if (maybeCommand.type !== 'unknown' && maybeCommand.type !== 'skip') {
+        // User sent a real command — clear pending and process normally
+        pendingTagStore.delete(chatId)
+      } else {
+        // Treat as comma-separated tag names
+        const tagNames = text.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+        if (tagNames.length > 0) {
+          await applyManualTags(pending.itemId, tagNames, 'manual')
+          pendingTagStore.delete(chatId)
+          await sendReply(chatId, `Tagged ${pending.itemName} with: ${tagNames.join(', ')}`)
+          return
+        }
+        // Empty input — clear and fall through
+        pendingTagStore.delete(chatId)
+      }
+    }
+  }
+
   const command = parseMessage(text)
   let reply: string
 
@@ -528,6 +822,34 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
       break
     case 'search-names':
       reply = await handleSearchNames(chatId)
+      break
+    case 'tag-search':
+      reply = await handleTagSearch(command.tagName)
+      break
+    case 'list-tags':
+      reply = await handleListTagsCmd()
+      break
+    case 'list-tags-item':
+      reply = await handleListTagsItem(command.itemName)
+      break
+    case 'tag-item':
+      reply = await handleTagItem(command.itemName, command.tagNames)
+      break
+    case 'untag-item':
+      reply = await handleUntagItem(command.itemName, command.tagName)
+      break
+    case 'save-dict':
+      reply = await handleSaveDictCmd(command.itemName)
+      break
+    case 'list-dict':
+      reply = await handleListDictCmd()
+      break
+    case 'delete-dict':
+      reply = await handleDeleteDictCmd(command.itemName)
+      break
+    case 'skip':
+      // Handled by pending tag store check above; fallback
+      reply = 'Nothing to skip.'
       break
     case 'help':
       reply = [
@@ -561,6 +883,19 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
         'After a search with multiple results:',
         '• "names" to see all matched item names',
         '• A zone like "A2" to filter by location',
+        '',
+        'Tags:',
+        '• "tags milk" — show tags on an item',
+        '• "tags" — list all tags',
+        '• "find by tag dairy" — search items by tag',
+        '• "tagged dairy" — shorthand for above',
+        '• "tag milk as organic, local" — add tags manually',
+        '• "untag milk dairy" — remove a tag',
+        '',
+        'Dictionary (saved templates):',
+        '• "save dict milk" — save item as template',
+        '• "dict" — list saved templates',
+        '• "delete dict milk" — remove a template',
         '',
         '• "u" to undo last action',
       ].join('\n')

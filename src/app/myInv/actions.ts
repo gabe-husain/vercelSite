@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { isEditor } from '@/src/lib/auth'
+import { applyAutoTags } from '@/src/lib/autoTagger'
 
 // --- Items ---
 
@@ -24,7 +25,7 @@ export async function addItem(formData: {
   }
 
   const supabase = await createClient()
-  const { error } = await supabase
+  const { data: inserted, error } = await supabase
     .from('items')
     .insert({
       name: formData.name.trim(),
@@ -32,9 +33,16 @@ export async function addItem(formData: {
       quantity: formData.quantity,
       notes: formData.notes?.trim() || null,
     })
+    .select('id')
+    .single()
 
   if (error) {
     return { error: error.message }
+  }
+
+  // Auto-tag the newly created item (additive-only, ON CONFLICT DO NOTHING)
+  if (inserted) {
+    await applyAutoTags(inserted.id, formData.name.trim(), formData.notes?.trim() || null)
   }
 
   revalidatePath('/myInv')
@@ -75,6 +83,9 @@ export async function updateItem(
   if (error) {
     return { error: error.message }
   }
+
+  // Re-run auto-tags on update (additive-only, discovers new tags if name/notes changed)
+  await applyAutoTags(id, formData.name.trim(), formData.notes?.trim() || null)
 
   revalidatePath('/myInv')
   return { success: true }
