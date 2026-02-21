@@ -5,7 +5,8 @@ export type LearnedUtterance = {
   id: number
   pattern: string // e.g. "what {item} stuff do we have"
   regex: string // compiled regex string
-  command_type: string // ParsedCommand type: "check", "tag-search", etc.
+  command_type: string | null // ParsedCommand type: "check", "tag-search", etc. Null if pipeline-linked.
+  pipeline_id: number | null // references pipelines.id — set for pipeline-linked utterances
   param_mapping: Record<string, number> // { "itemName": 1 } — capture group index
   example_input: string | null
   example_extraction: Record<string, string> | null

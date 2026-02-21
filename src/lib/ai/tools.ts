@@ -151,26 +151,90 @@ export const TOOL_DEFINITIONS: AnthropicToolDef[] = [
     },
   },
   {
+    name: 'run_query',
+    description:
+      'Execute a SQL query against the inventory database. Use $1, $2, ... for parameters. SELECT/WITH queries are read-only. INSERT/UPDATE/DELETE are allowed for mutations. DDL (DROP, ALTER, CREATE, TRUNCATE) is forbidden. Tables: items (id, name, location_id, quantity, notes), locations (id, name, notes), tags (id, name, category, is_custom), item_tags (item_id, tag_id, source), dictionary (id, item_name, default_notes, default_zone, default_tags). Use JOINs to connect items→locations and items→item_tags→tags.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        sql: {
+          type: 'string',
+          description:
+            'SQL query with $1, $2, ... for parameters. Must start with SELECT, WITH, INSERT, UPDATE, or DELETE.',
+        },
+        params: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Parameter values in order, matching $1, $2, ... in the query',
+        },
+      },
+      required: ['sql'],
+    },
+  },
+  {
+    name: 'create_pipeline',
+    description:
+      'Save a reusable SQL query as a named pipeline. Once saved, link it to an utterance pattern via learn_utterance so similar questions are answered instantly without AI. Include a format_template for Telegram output formatting.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Unique pipeline name in snake_case, e.g. "items_by_tag_in_zone"',
+        },
+        description: {
+          type: 'string',
+          description: 'What this pipeline does, in plain English',
+        },
+        sql_template: {
+          type: 'string',
+          description: 'Parameterized SQL using $1, $2, ... for parameters',
+        },
+        params: {
+          type: 'array',
+          items: { type: 'string' },
+          description:
+            'Named parameters in order matching $1, $2, ... e.g. ["zone_name", "tag_name"]',
+        },
+        is_mutation: {
+          type: 'boolean',
+          description: 'true if this pipeline modifies data (INSERT/UPDATE/DELETE), false for SELECT',
+        },
+        format_template: {
+          type: 'string',
+          description:
+            'Template for formatting results in Telegram. Use line prefixes: "{{_header}}Found {{_count}} items:" for the header, "{{_row}}- {{name}} (×{{quantity}}) in {{location}}" repeated per row with {{column_name}} substitutions, "{{_empty}}Nothing found." shown when 0 results. Separate sections with newlines.',
+        },
+      },
+      required: ['name', 'description', 'sql_template', 'params', 'is_mutation', 'format_template'],
+    },
+  },
+  {
     name: 'learn_utterance',
     description:
-      'Teach the regex bot a new pattern so it can handle similar inventory messages without AI next time. Only call this for inventory-related commands (check, add, remove, move, list, tag, etc.) — NOT for conversational messages, greetings, questions about non-inventory topics, or context-dependent follow-ups. Use placeholders: {item} for item names, {zone} for zone IDs (e.g. A1), {quantity} for numbers, {tag} for tag names. Pattern must have at least 3 words.',
+      'Teach the regex bot a new pattern so it can handle similar messages without AI next time. Can link to a command_type (for simple inventory actions) OR to a pipeline_name (for complex queries you saved with create_pipeline). Use placeholders: {item} for item names, {zone} for zone IDs (e.g. A1), {quantity} for numbers, {tag} for tag names. Pattern must have at least 3 words.',
     input_schema: {
       type: 'object',
       properties: {
         pattern: {
           type: 'string',
           description:
-            'Generalized pattern with placeholders, e.g. "got any {item} left" or "add {quantity} {item} to {zone}"',
+            'Generalized pattern with placeholders, e.g. "got any {item} left" or "show me all {tag} in {zone}"',
         },
         command_type: {
           type: 'string',
           description:
-            'The ParsedCommand type this maps to: "check", "tag-search", "remove", "add", "update-qty", "list", "list-all", "list-tags", "list-tags-item", "tag-item", "untag-item", "search-names", "list-dict"',
+            'The ParsedCommand type this maps to: "check", "tag-search", "remove", "add", "update-qty", "list", "list-all", "list-tags", "list-tags-item", "tag-item", "untag-item", "search-names", "list-dict". Use this OR pipeline_name, not both.',
+        },
+        pipeline_name: {
+          type: 'string',
+          description:
+            'Name of a saved pipeline to link to (from create_pipeline). Use this OR command_type, not both.',
         },
         param_mapping: {
           type: 'object',
           description:
-            'Maps command parameter names to placeholders. e.g. {"itemName": "{item}"} or {"itemName": "{item}", "zone": "{zone}"}',
+            'Maps parameter names to placeholders. For command_type: e.g. {"itemName": "{item}"}. For pipeline_name: e.g. {"zone_name": "{zone}", "tag_name": "{tag}"} — keys must match the pipeline\'s params array.',
         },
         example_input: {
           type: 'string',
@@ -184,7 +248,6 @@ export const TOOL_DEFINITIONS: AnthropicToolDef[] = [
       },
       required: [
         'pattern',
-        'command_type',
         'param_mapping',
         'example_input',
         'example_extraction',
@@ -261,11 +324,25 @@ export async function executeTool(
         return await execSearchByTag(input as { tag: string })
       case 'web_search':
         return await execWebSearch(input as { query: string })
+      case 'run_query':
+        return await execRunQuery(input as { sql: string; params?: string[] })
+      case 'create_pipeline':
+        return await execCreatePipeline(
+          input as {
+            name: string
+            description: string
+            sql_template: string
+            params: string[]
+            is_mutation: boolean
+            format_template: string
+          },
+        )
       case 'learn_utterance':
         return await execLearnUtterance(
           input as {
             pattern: string
-            command_type: string
+            command_type?: string
+            pipeline_name?: string
             param_mapping: Record<string, string>
             example_input: string
             example_extraction: Record<string, string>
@@ -666,9 +743,87 @@ async function execWebSearch(input: { query: string }): Promise<string> {
   return JSON.stringify({ results })
 }
 
+async function execRunQuery(input: { sql: string; params?: string[] }): Promise<string> {
+  const { validateSQL } = await import('../pipelines/validator')
+
+  const validation = validateSQL(input.sql)
+  if (!validation.valid) {
+    return JSON.stringify({ error: `SQL rejected: ${validation.reason}` })
+  }
+
+  const params = input.params || []
+
+  if (validation.queryType === 'select') {
+    const { data, error } = await supabaseAdmin.rpc('execute_readonly_query', {
+      query_text: input.sql,
+      query_params: params,
+    })
+    if (error) return JSON.stringify({ error: `Query failed: ${error.message}` })
+    const rows = (data as Record<string, unknown>[]) || []
+    const truncated = JSON.stringify({ results: rows })
+    return truncated.length > 4000 ? truncated.slice(0, 4000) + '...(truncated)' : truncated
+  } else {
+    // Mutation (INSERT/UPDATE/DELETE)
+    const { data, error } = await supabaseAdmin.rpc('execute_mutation_query', {
+      query_text: input.sql,
+      query_params: params,
+    })
+    if (error) return JSON.stringify({ error: `Mutation failed: ${error.message}` })
+    invalidateCache()
+    return JSON.stringify(data)
+  }
+}
+
+async function execCreatePipeline(input: {
+  name: string
+  description: string
+  sql_template: string
+  params: string[]
+  is_mutation: boolean
+  format_template: string
+}): Promise<string> {
+  const { validateSQL } = await import('../pipelines/validator')
+  const { savePipeline } = await import('../pipelines/cache')
+
+  // Validate the SQL template
+  const validation = validateSQL(input.sql_template)
+  if (!validation.valid) {
+    return JSON.stringify({ error: `SQL rejected: ${validation.reason}` })
+  }
+
+  // Verify is_mutation flag matches the SQL type
+  const isMutationType = validation.queryType !== 'select'
+  if (input.is_mutation !== isMutationType) {
+    return JSON.stringify({
+      error: `is_mutation=${input.is_mutation} but SQL is a ${validation.queryType.toUpperCase()} query. Set is_mutation=${isMutationType}.`,
+    })
+  }
+
+  const result = await savePipeline({
+    name: input.name.trim().toLowerCase().replace(/\s+/g, '_'),
+    description: input.description,
+    sql_template: input.sql_template,
+    params: input.params,
+    is_mutation: input.is_mutation,
+    format_template: input.format_template || null,
+  })
+
+  if (!result.success) {
+    return JSON.stringify({ error: `Save failed: ${result.error}` })
+  }
+
+  return JSON.stringify({
+    success: true,
+    pipeline_name: input.name,
+    pipeline_id: result.id,
+    message: 'Pipeline saved. Now link it to an utterance pattern with learn_utterance.',
+  })
+}
+
 async function execLearnUtterance(input: {
   pattern: string
-  command_type: string
+  command_type?: string
+  pipeline_name?: string
   param_mapping: Record<string, string>
   example_input: string
   example_extraction: Record<string, string>
@@ -678,6 +833,18 @@ async function execLearnUtterance(input: {
   )
   const { saveUtterance } = await import('../engrams/cache')
   const { getNewExpiry } = await import('../engrams/ttl')
+
+  // Must have either command_type or pipeline_name
+  if (!input.command_type && !input.pipeline_name) {
+    return JSON.stringify({
+      error: 'Must provide either command_type or pipeline_name.',
+    })
+  }
+  if (input.command_type && input.pipeline_name) {
+    return JSON.stringify({
+      error: 'Provide command_type OR pipeline_name, not both.',
+    })
+  }
 
   // 1. Compile the pattern into a regex
   const compiled = compilePattern(input.pattern)
@@ -698,10 +865,32 @@ async function execLearnUtterance(input: {
     })
   }
 
-  // 3. Validate against the example
+  // 3. Resolve pipeline if pipeline_name is provided
+  let pipelineId: number | null = null
+  if (input.pipeline_name) {
+    const { getPipelineByName } = await import('../pipelines/cache')
+    const pipeline = await getPipelineByName(input.pipeline_name)
+    if (!pipeline) {
+      return JSON.stringify({
+        error: `Pipeline "${input.pipeline_name}" not found. Create it first with create_pipeline.`,
+      })
+    }
+    pipelineId = pipeline.id
+
+    // Validate param_mapping keys match pipeline params
+    const mappingKeys = Object.keys(resolvedMapping)
+    const missingParams = pipeline.params.filter((p) => !mappingKeys.includes(p))
+    if (missingParams.length > 0) {
+      return JSON.stringify({
+        error: `Pipeline expects params [${pipeline.params.join(', ')}] but mapping is missing: ${missingParams.join(', ')}`,
+      })
+    }
+  }
+
+  // 4. Validate against the example
   const validation = validatePattern({
     regex: compiled.regex,
-    commandType: input.command_type,
+    commandType: input.command_type || null,
     exampleInput: input.example_input,
     exampleExtraction: input.example_extraction,
     captureGroups: compiled.captureGroups,
@@ -712,11 +901,12 @@ async function execLearnUtterance(input: {
     })
   }
 
-  // 4. Save to Supabase with TTL level 0 (1-day initial expiry)
+  // 5. Save to Supabase with TTL level 0 (1-day initial expiry)
   const result = await saveUtterance({
     pattern: input.pattern.trim().toLowerCase(),
     regex: compiled.regex,
-    command_type: input.command_type,
+    command_type: input.command_type || null,
+    pipeline_id: pipelineId,
     param_mapping: resolvedMapping,
     example_input: input.example_input,
     example_extraction: input.example_extraction,
@@ -731,7 +921,7 @@ async function execLearnUtterance(input: {
   return JSON.stringify({
     success: true,
     pattern: input.pattern,
-    command_type: input.command_type,
-    message: 'Pattern learned. The regex bot will handle similar messages next time.',
+    linked_to: pipelineId ? `pipeline: ${input.pipeline_name}` : `command: ${input.command_type}`,
+    message: 'Pattern learned! The regex bot will handle similar messages next time.',
   })
 }

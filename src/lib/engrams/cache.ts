@@ -69,7 +69,8 @@ export async function getCachedUtterances(): Promise<CompiledUtterance[]> {
 export async function saveUtterance(utterance: {
   pattern: string
   regex: string
-  command_type: string
+  command_type: string | null
+  pipeline_id: number | null
   param_mapping: Record<string, number>
   example_input: string
   example_extraction: Record<string, string>
@@ -81,6 +82,7 @@ export async function saveUtterance(utterance: {
       pattern: utterance.pattern,
       regex: utterance.regex,
       command_type: utterance.command_type,
+      pipeline_id: utterance.pipeline_id,
       param_mapping: utterance.param_mapping,
       example_input: utterance.example_input,
       example_extraction: utterance.example_extraction,

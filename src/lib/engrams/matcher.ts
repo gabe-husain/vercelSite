@@ -1,9 +1,11 @@
 import type { CompiledUtterance } from './types'
 import type { ParsedCommand } from '../telegramBot'
 
-type MatchResult = {
-  command: ParsedCommand
+export type MatchResult = {
+  command: ParsedCommand | null // null if pipeline-linked
   utterance: CompiledUtterance
+  pipelineId: number | null // set if pipeline-linked
+  params: Record<string, string> // extracted param values by name (for pipelines)
 }
 
 /**
@@ -20,17 +22,47 @@ export function matchUtterance(
     const match = utterance.compiledRegex.exec(trimmed)
     if (!match) continue
 
-    const command = buildCommand(
-      utterance.command_type,
-      utterance.param_mapping,
-      match,
-    )
-    if (command) {
-      return { command, utterance }
+    // Pipeline-linked utterance
+    if (utterance.pipeline_id) {
+      const params = extractPipelineParams(utterance.param_mapping, match)
+      return {
+        command: null,
+        utterance,
+        pipelineId: utterance.pipeline_id,
+        params,
+      }
+    }
+
+    // Command-type utterance (existing behavior)
+    if (utterance.command_type) {
+      const command = buildCommand(
+        utterance.command_type,
+        utterance.param_mapping,
+        match,
+      )
+      if (command) {
+        return { command, utterance, pipelineId: null, params: {} }
+      }
     }
   }
 
   return null
+}
+
+/**
+ * Extract named parameter values from regex match for pipeline execution.
+ * param_mapping maps param names to capture group indices: { "zone_name": 1, "tag_name": 2 }
+ * Returns: { "zone_name": "A1", "tag_name": "dairy" }
+ */
+function extractPipelineParams(
+  paramMapping: Record<string, number>,
+  match: RegExpExecArray,
+): Record<string, string> {
+  const params: Record<string, string> = {}
+  for (const [paramName, groupIndex] of Object.entries(paramMapping)) {
+    params[paramName] = match[groupIndex]?.trim() ?? ''
+  }
+  return params
 }
 
 /**

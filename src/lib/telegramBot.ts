@@ -934,10 +934,25 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
             bumpUtterance(engramMatch.utterance.id).catch((err) =>
               console.error('Engram bump error:', err),
             )
-            const engramReply = await dispatchCommand(engramMatch.command, chatId)
-            if (engramReply !== null) {
-              reply = engramReply
-              break
+
+            if (engramMatch.pipelineId) {
+              // Pipeline-linked utterance — execute the pipeline
+              const { executePipeline } = await import('./pipelines/executor')
+              const pipelineReply = await executePipeline(
+                engramMatch.pipelineId,
+                engramMatch.params,
+              )
+              if (pipelineReply !== null) {
+                reply = pipelineReply
+                break
+              }
+            } else if (engramMatch.command) {
+              // Command-type utterance (existing behavior)
+              const engramReply = await dispatchCommand(engramMatch.command, chatId)
+              if (engramReply !== null) {
+                reply = engramReply
+                break
+              }
             }
           }
         } catch (err) {

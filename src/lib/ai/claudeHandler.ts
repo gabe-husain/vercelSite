@@ -10,8 +10,8 @@ import { getConversation, appendToConversation } from './conversationStore'
 import { undoStore, sendReply } from '../telegramBot'
 
 const MODEL = 'claude-haiku-4-5-20251001'
-const MAX_TOKENS = 1024
-const MAX_ROUNDS = 5
+const MAX_TOKENS = 2048
+const MAX_ROUNDS = 7
 const API_TIMEOUT_MS = 25_000
 
 /**

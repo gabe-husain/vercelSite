@@ -119,13 +119,13 @@ export function resolveParamMapping(
  */
 export function validatePattern(opts: {
   regex: string
-  commandType: string
+  commandType: string | null
   exampleInput: string
   exampleExtraction: Record<string, string>
   captureGroups: string[]
 }): { valid: boolean; reason?: string } {
-  // Check command type is valid
-  if (!VALID_COMMAND_TYPES.has(opts.commandType)) {
+  // Check command type is valid (skip for pipeline-linked patterns where commandType is null)
+  if (opts.commandType !== null && !VALID_COMMAND_TYPES.has(opts.commandType)) {
     return { valid: false, reason: `Invalid command type: ${opts.commandType}` }
   }
 
