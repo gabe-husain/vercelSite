@@ -848,8 +848,48 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
     }
   }
 
+  // ── Layer 2: Learned utterances (engrams) — checked FIRST ──
+  // Engrams/pipelines get priority over hardcoded parsing so that once
+  // the AI learns a pattern, it never needs to be called again for it.
+  let reply: string | null = null
+
+  try {
+    const { matchUtterance } = await import('./engrams/matcher')
+    const { getCachedUtterances, bumpUtterance } = await import('./engrams/cache')
+
+    const utterances = await getCachedUtterances()
+    const engramMatch = matchUtterance(text, utterances)
+
+    if (engramMatch) {
+      // Bump TTL in background (non-blocking)
+      bumpUtterance(engramMatch.utterance.id).catch((err) =>
+        console.error('Engram bump error:', err),
+      )
+
+      if (engramMatch.pipelineId) {
+        // Pipeline-linked utterance — execute the stored SQL
+        const { executePipeline } = await import('./pipelines/executor')
+        reply = await executePipeline(
+          engramMatch.pipelineId,
+          engramMatch.params,
+        )
+      } else if (engramMatch.command) {
+        // Command-type utterance — dispatch through existing handler
+        reply = await dispatchCommand(engramMatch.command, chatId)
+      }
+    }
+  } catch (err) {
+    console.error('Engram matching error:', err)
+  }
+
+  // If engram handled it, send reply and stop — no AI needed
+  if (reply !== null) {
+    await sendReply(chatId, reply)
+    return
+  }
+
+  // ── Layer 1: Hardcoded regex parser ──
   const command = parseMessage(text)
-  let reply: string
 
   // Try dispatch for all standard command types
   const dispatched = command.type !== 'skip' && command.type !== 'help' && command.type !== 'unknown'
@@ -914,52 +954,14 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
         ].join('\n')
         break
       case 'unknown': {
-        // 1. Check if this is a bare zone ID with a pending search
+        // Check if this is a bare zone ID with a pending search
         const t = text.trim().toUpperCase()
         if (/^[A-Z]\d+$/.test(t) && lastSearchStore.has(chatId)) {
           reply = await handleSearchFilterZone(chatId, t)
           break
         }
 
-        // 2. Check learned utterances (engrams) before AI
-        try {
-          const { matchUtterance } = await import('./engrams/matcher')
-          const { getCachedUtterances, bumpUtterance } = await import('./engrams/cache')
-
-          const utterances = await getCachedUtterances()
-          const engramMatch = matchUtterance(text, utterances)
-
-          if (engramMatch) {
-            // Bump TTL in background (non-blocking)
-            bumpUtterance(engramMatch.utterance.id).catch((err) =>
-              console.error('Engram bump error:', err),
-            )
-
-            if (engramMatch.pipelineId) {
-              // Pipeline-linked utterance — execute the pipeline
-              const { executePipeline } = await import('./pipelines/executor')
-              const pipelineReply = await executePipeline(
-                engramMatch.pipelineId,
-                engramMatch.params,
-              )
-              if (pipelineReply !== null) {
-                reply = pipelineReply
-                break
-              }
-            } else if (engramMatch.command) {
-              // Command-type utterance (existing behavior)
-              const engramReply = await dispatchCommand(engramMatch.command, chatId)
-              if (engramReply !== null) {
-                reply = engramReply
-                break
-              }
-            }
-          }
-        } catch (err) {
-          console.error('Engram matching error:', err)
-        }
-
-        // 3. Escalate to Claude AI — it sends its own messages (thinking + response)
+        // Escalate to Claude AI — it sends its own messages (thinking + response)
         try {
           await handleAIMessage(chatId, text)
           return // AI handler already sent the reply
@@ -967,7 +969,7 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
           console.error('AI handler error:', err)
         }
 
-        // 4. Fallback if AI unavailable or errored
+        // Fallback if AI unavailable or errored
         reply = [
           "I didn't understand that. Try:",
           '• "Bought 5 Bananas in N2"',
@@ -986,5 +988,5 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
     }
   }
 
-  await sendReply(chatId, reply)
+  await sendReply(chatId, reply!)
 }
