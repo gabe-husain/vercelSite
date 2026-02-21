@@ -27,7 +27,7 @@ interface TelegramUpdate {
 }
 
 // ── Parsed command types ─────────────────────────────────────
-type ParsedCommand =
+export type ParsedCommand =
   | { type: 'remove'; itemName: string; zone?: string }
   | { type: 'add'; itemName: string; quantity: number; zone: string }
   | { type: 'update-qty'; itemName: string; quantity: number }
@@ -743,6 +743,49 @@ async function handleDeleteDictCmd(itemName: string): Promise<string> {
   return `Removed "${itemName}" from dictionary.`
 }
 
+// ── Dispatch helper (reusable by engram matcher) ─────────────
+async function dispatchCommand(
+  command: ParsedCommand,
+  chatId: number,
+): Promise<string | null> {
+  switch (command.type) {
+    case 'remove':
+      return handleRemove(command.itemName, chatId, command.zone)
+    case 'add':
+      return handleAdd(command.itemName, command.quantity, command.zone, chatId)
+    case 'update-qty':
+      return handleUpdateQty(command.itemName, command.quantity, chatId)
+    case 'check':
+      return handleCheck(command.itemName, chatId)
+    case 'undo':
+      return handleUndo(chatId)
+    case 'list':
+      return handleList(command.zone)
+    case 'list-all':
+      return handleListAll()
+    case 'search-names':
+      return handleSearchNames(chatId)
+    case 'tag-search':
+      return handleTagSearch(command.tagName)
+    case 'list-tags':
+      return handleListTagsCmd()
+    case 'list-tags-item':
+      return handleListTagsItem(command.itemName)
+    case 'tag-item':
+      return handleTagItem(command.itemName, command.tagNames)
+    case 'untag-item':
+      return handleUntagItem(command.itemName, command.tagName)
+    case 'save-dict':
+      return handleSaveDictCmd(command.itemName)
+    case 'list-dict':
+      return handleListDictCmd()
+    case 'delete-dict':
+      return handleDeleteDictCmd(command.itemName)
+    default:
+      return null
+  }
+}
+
 // ── Telegram reply helper ────────────────────────────────────
 export async function sendReply(chatId: number, text: string): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN!
@@ -808,135 +851,123 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
   const command = parseMessage(text)
   let reply: string
 
-  switch (command.type) {
-    case 'remove':
-      reply = await handleRemove(command.itemName, chatId, command.zone)
-      break
-    case 'add':
-      reply = await handleAdd(command.itemName, command.quantity, command.zone, chatId)
-      break
-    case 'update-qty':
-      reply = await handleUpdateQty(command.itemName, command.quantity, chatId)
-      break
-    case 'check':
-      reply = await handleCheck(command.itemName, chatId)
-      break
-    case 'undo':
-      reply = await handleUndo(chatId)
-      break
-    case 'list':
-      reply = await handleList(command.zone)
-      break
-    case 'list-all':
-      reply = await handleListAll()
-      break
-    case 'search-names':
-      reply = await handleSearchNames(chatId)
-      break
-    case 'tag-search':
-      reply = await handleTagSearch(command.tagName)
-      break
-    case 'list-tags':
-      reply = await handleListTagsCmd()
-      break
-    case 'list-tags-item':
-      reply = await handleListTagsItem(command.itemName)
-      break
-    case 'tag-item':
-      reply = await handleTagItem(command.itemName, command.tagNames)
-      break
-    case 'untag-item':
-      reply = await handleUntagItem(command.itemName, command.tagName)
-      break
-    case 'save-dict':
-      reply = await handleSaveDictCmd(command.itemName)
-      break
-    case 'list-dict':
-      reply = await handleListDictCmd()
-      break
-    case 'delete-dict':
-      reply = await handleDeleteDictCmd(command.itemName)
-      break
-    case 'skip':
-      // Handled by pending tag store check above; fallback
-      reply = 'Nothing to skip.'
-      break
-    case 'help':
-      reply = [
-        'Kitchen Inventory Bot commands:',
-        '',
-        'Add items:',
-        '• "Bought 5 Bananas in N2"',
-        '• "I put the rice in A1"',
-        '• "Added milk to F1"',
-        '',
-        'Remove items:',
-        '• "Finished the Dumpling Sauce"',
-        '• "Used up the milk"',
-        '• "Remove eggs from A2"',
-        '• "Take out bread from B1"',
-        '',
-        'Check / find items (searches name + notes):',
-        '• "How many eggs do I have"',
-        '• "Where is the milk"',
-        '• "Find noodles"',
-        '• "Do I have corn"',
-        '',
-        'Update quantity:',
-        '• "Set eggs to 5"',
-        '• "I have 3 milk"',
-        '',
-        'List:',
-        '• "List N2" or "What\'s in A1"',
-        '• "List all items" or "Show everything"',
-        '',
-        'After a search with multiple results:',
-        '• "names" to see all matched item names',
-        '• A zone like "A2" to filter by location',
-        '',
-        'Tags:',
-        '• "tags milk" — show tags on an item',
-        '• "tags" — list all tags',
-        '• "find by tag dairy" — search items by tag',
-        '• "tagged dairy" — shorthand for above',
-        '• "tag milk as organic, local" — add tags manually',
-        '• "untag milk dairy" — remove a tag',
-        '',
-        'Dictionary (saved templates):',
-        '• "save dict milk" — save item as template',
-        '• "dict" — list saved templates',
-        '• "delete dict milk" — remove a template',
-        '',
-        '• "u" to undo last action',
-      ].join('\n')
-      break
-    case 'unknown': {
-      // Before AI fallback, check if this is a bare zone ID with a pending search
-      const t = text.trim().toUpperCase()
-      if (/^[A-Z]\d+$/.test(t) && lastSearchStore.has(chatId)) {
-        reply = await handleSearchFilterZone(chatId, t)
+  // Try dispatch for all standard command types
+  const dispatched = command.type !== 'skip' && command.type !== 'help' && command.type !== 'unknown'
+    ? await dispatchCommand(command, chatId)
+    : null
+
+  if (dispatched !== null && command.type !== 'skip' && command.type !== 'help' && command.type !== 'unknown') {
+    reply = dispatched
+  } else {
+    // Handle special cases that need inline logic
+    switch (command.type) {
+      case 'skip':
+        reply = 'Nothing to skip.'
+        break
+      case 'help':
+        reply = [
+          'Kitchen Inventory Bot commands:',
+          '',
+          'Add items:',
+          '• "Bought 5 Bananas in N2"',
+          '• "I put the rice in A1"',
+          '• "Added milk to F1"',
+          '',
+          'Remove items:',
+          '• "Finished the Dumpling Sauce"',
+          '• "Used up the milk"',
+          '• "Remove eggs from A2"',
+          '• "Take out bread from B1"',
+          '',
+          'Check / find items (searches name + notes):',
+          '• "How many eggs do I have"',
+          '• "Where is the milk"',
+          '• "Find noodles"',
+          '• "Do I have corn"',
+          '',
+          'Update quantity:',
+          '• "Set eggs to 5"',
+          '• "I have 3 milk"',
+          '',
+          'List:',
+          '• "List N2" or "What\'s in A1"',
+          '• "List all items" or "Show everything"',
+          '',
+          'After a search with multiple results:',
+          '• "names" to see all matched item names',
+          '• A zone like "A2" to filter by location',
+          '',
+          'Tags:',
+          '• "tags milk" — show tags on an item',
+          '• "tags" — list all tags',
+          '• "find by tag dairy" — search items by tag',
+          '• "tagged dairy" — shorthand for above',
+          '• "tag milk as organic, local" — add tags manually',
+          '• "untag milk dairy" — remove a tag',
+          '',
+          'Dictionary (saved templates):',
+          '• "save dict milk" — save item as template',
+          '• "dict" — list saved templates',
+          '• "delete dict milk" — remove a template',
+          '',
+          '• "u" to undo last action',
+        ].join('\n')
+        break
+      case 'unknown': {
+        // 1. Check if this is a bare zone ID with a pending search
+        const t = text.trim().toUpperCase()
+        if (/^[A-Z]\d+$/.test(t) && lastSearchStore.has(chatId)) {
+          reply = await handleSearchFilterZone(chatId, t)
+          break
+        }
+
+        // 2. Check learned utterances (engrams) before AI
+        try {
+          const { matchUtterance } = await import('./engrams/matcher')
+          const { getCachedUtterances, bumpUtterance } = await import('./engrams/cache')
+
+          const utterances = await getCachedUtterances()
+          const engramMatch = matchUtterance(text, utterances)
+
+          if (engramMatch) {
+            // Bump TTL in background (non-blocking)
+            bumpUtterance(engramMatch.utterance.id).catch((err) =>
+              console.error('Engram bump error:', err),
+            )
+            const engramReply = await dispatchCommand(engramMatch.command, chatId)
+            if (engramReply !== null) {
+              reply = engramReply
+              break
+            }
+          }
+        } catch (err) {
+          console.error('Engram matching error:', err)
+        }
+
+        // 3. Escalate to Claude AI — it sends its own messages (thinking + response)
+        try {
+          await handleAIMessage(chatId, text)
+          return // AI handler already sent the reply
+        } catch (err) {
+          console.error('AI handler error:', err)
+        }
+
+        // 4. Fallback if AI unavailable or errored
+        reply = [
+          "I didn't understand that. Try:",
+          '• "Bought 5 Bananas in N2"',
+          '• "Finished the Dumpling Sauce"',
+          '• "How many eggs do I have"',
+          '• "Find noodles" (searches notes too)',
+          '• "List N2"',
+          '• "help" for all commands',
+        ].join('\n')
         break
       }
-
-      // Escalate to Claude AI — it sends its own messages (thinking + response)
-      try {
-        await handleAIMessage(chatId, text)
-        return // AI handler already sent the reply
-      } catch (err) {
-        console.error('AI handler error:', err)
-      }
-
-      // Fallback if AI unavailable or errored
-      reply = [
-        "I didn't understand that. Try:",
-        '• "Bought 5 Bananas in N2"',
-        '• "Finished the Dumpling Sauce"',
-        '• "How many eggs do I have"',
-        '• "Find noodles" (searches notes too)',
-        '• "List N2"',
-        '• "help" for all commands',
-      ].join('\n')
-      break
+      default:
+        // dispatchCommand returned null for an unexpected type
+        reply = 'Something went wrong. Type "help" for commands.'
+        break
     }
   }
 

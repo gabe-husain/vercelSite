@@ -150,6 +150,47 @@ export const TOOL_DEFINITIONS: AnthropicToolDef[] = [
       required: ['query'],
     },
   },
+  {
+    name: 'learn_utterance',
+    description:
+      'Teach the regex bot a new pattern so it can handle similar inventory messages without AI next time. Only call this for inventory-related commands (check, add, remove, move, list, tag, etc.) — NOT for conversational messages, greetings, questions about non-inventory topics, or context-dependent follow-ups. Use placeholders: {item} for item names, {zone} for zone IDs (e.g. A1), {quantity} for numbers, {tag} for tag names. Pattern must have at least 3 words.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        pattern: {
+          type: 'string',
+          description:
+            'Generalized pattern with placeholders, e.g. "got any {item} left" or "add {quantity} {item} to {zone}"',
+        },
+        command_type: {
+          type: 'string',
+          description:
+            'The ParsedCommand type this maps to: "check", "tag-search", "remove", "add", "update-qty", "list", "list-all", "list-tags", "list-tags-item", "tag-item", "untag-item", "search-names", "list-dict"',
+        },
+        param_mapping: {
+          type: 'object',
+          description:
+            'Maps command parameter names to placeholders. e.g. {"itemName": "{item}"} or {"itemName": "{item}", "zone": "{zone}"}',
+        },
+        example_input: {
+          type: 'string',
+          description: 'The actual user message that triggered this learning',
+        },
+        example_extraction: {
+          type: 'object',
+          description:
+            'Expected extracted values from the example. Keys are placeholder names (without braces), values are the expected extracted text. e.g. {"item": "cheese"}',
+        },
+      },
+      required: [
+        'pattern',
+        'command_type',
+        'param_mapping',
+        'example_input',
+        'example_extraction',
+      ],
+    },
+  },
 ]
 
 // ── Zone resolution (mirrors telegramBot.ts logic) ──────────
@@ -220,6 +261,16 @@ export async function executeTool(
         return await execSearchByTag(input as { tag: string })
       case 'web_search':
         return await execWebSearch(input as { query: string })
+      case 'learn_utterance':
+        return await execLearnUtterance(
+          input as {
+            pattern: string
+            command_type: string
+            param_mapping: Record<string, string>
+            example_input: string
+            example_extraction: Record<string, string>
+          },
+        )
       default:
         return JSON.stringify({ error: `Unknown tool: ${name}` })
     }
@@ -613,4 +664,74 @@ async function execSearchByTag(input: { tag: string }): Promise<string> {
 async function execWebSearch(input: { query: string }): Promise<string> {
   const results = await braveWebSearch(input.query)
   return JSON.stringify({ results })
+}
+
+async function execLearnUtterance(input: {
+  pattern: string
+  command_type: string
+  param_mapping: Record<string, string>
+  example_input: string
+  example_extraction: Record<string, string>
+}): Promise<string> {
+  const { compilePattern, resolveParamMapping, validatePattern } = await import(
+    '../engrams/compiler'
+  )
+  const { saveUtterance } = await import('../engrams/cache')
+  const { getNewExpiry } = await import('../engrams/ttl')
+
+  // 1. Compile the pattern into a regex
+  const compiled = compilePattern(input.pattern)
+  if (!compiled) {
+    return JSON.stringify({
+      error: 'Pattern compilation failed. Ensure it has at least 3 words and uses valid placeholders ({item}, {zone}, {quantity}, {tag}).',
+    })
+  }
+
+  // 2. Resolve param_mapping from placeholder names to capture group indices
+  const resolvedMapping = resolveParamMapping(
+    input.param_mapping,
+    compiled.captureGroups,
+  )
+  if (!resolvedMapping) {
+    return JSON.stringify({
+      error: 'Param mapping resolution failed. Ensure all placeholder references match placeholders in the pattern.',
+    })
+  }
+
+  // 3. Validate against the example
+  const validation = validatePattern({
+    regex: compiled.regex,
+    commandType: input.command_type,
+    exampleInput: input.example_input,
+    exampleExtraction: input.example_extraction,
+    captureGroups: compiled.captureGroups,
+  })
+  if (!validation.valid) {
+    return JSON.stringify({
+      error: `Validation failed: ${validation.reason}`,
+    })
+  }
+
+  // 4. Save to Supabase with TTL level 0 (1-day initial expiry)
+  const result = await saveUtterance({
+    pattern: input.pattern.trim().toLowerCase(),
+    regex: compiled.regex,
+    command_type: input.command_type,
+    param_mapping: resolvedMapping,
+    example_input: input.example_input,
+    example_extraction: input.example_extraction,
+    ttl_level: 0,
+    expires_at: getNewExpiry(0).toISOString(),
+  })
+
+  if (!result.success) {
+    return JSON.stringify({ error: `Save failed: ${result.error}` })
+  }
+
+  return JSON.stringify({
+    success: true,
+    pattern: input.pattern,
+    command_type: input.command_type,
+    message: 'Pattern learned. The regex bot will handle similar messages next time.',
+  })
 }
