@@ -8,7 +8,6 @@ const PLACEHOLDER_REGEX: Record<string, string> = {
   '{tag}': '(.+?)',
 }
 
-const PLACEHOLDER_NAMES = Object.keys(PLACEHOLDER_REGEX)
 const PLACEHOLDER_RE = /\{(item|zone|quantity|tag)\}/g
 
 // Valid command types that engrams can map to
@@ -44,20 +43,7 @@ export function compilePattern(
   const trimmed = pattern.trim().toLowerCase()
   if (!trimmed) return null
 
-  // Check that at least one placeholder exists
-  const placeholders: string[] = []
-  let hasPlaceholder = false
-
-  // Reset lastIndex for the global regex
-  PLACEHOLDER_RE.lastIndex = 0
-  let match: RegExpExecArray | null
-  while ((match = PLACEHOLDER_RE.exec(trimmed)) !== null) {
-    placeholders.push(match[1]) // e.g. "item", "zone"
-    hasPlaceholder = true
-  }
-
-  // Patterns with no placeholders are only valid for parameterless commands
-  // but still must have at least 3 words to avoid overly broad matches
+  // Patterns must have at least 3 words to avoid overly broad matches
   const wordCount = trimmed.split(/\s+/).length
   if (wordCount < 3) return null
 
@@ -67,7 +53,6 @@ export function compilePattern(
 
   let regexStr = '^'
   const captureGroups: string[] = []
-  let placeholderIdx = 0
 
   for (let i = 0; i < parts.length; i++) {
     if (i % 2 === 0) {
@@ -88,7 +73,6 @@ export function compilePattern(
       if (regexStr !== '^') regexStr += '\\s+'
       regexStr += fragment
       captureGroups.push(name)
-      placeholderIdx++
     }
   }
 
