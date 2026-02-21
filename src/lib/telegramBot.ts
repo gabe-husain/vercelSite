@@ -918,13 +918,10 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
         break
       }
 
-      // Escalate to Claude AI
+      // Escalate to Claude AI — it sends its own messages (thinking + response)
       try {
-        const aiReply = await handleAIMessage(chatId, text)
-        if (aiReply) {
-          reply = aiReply
-          break
-        }
+        await handleAIMessage(chatId, text)
+        return // AI handler already sent the reply
       } catch (err) {
         console.error('AI handler error:', err)
       }

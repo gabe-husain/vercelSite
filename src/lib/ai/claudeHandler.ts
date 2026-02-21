@@ -7,7 +7,7 @@ import type {
 import { buildSystemPrompt } from './systemPrompt'
 import { TOOL_DEFINITIONS, executeTool } from './tools'
 import { getConversation, appendToConversation } from './conversationStore'
-import { undoStore } from '../telegramBot'
+import { undoStore, sendReply } from '../telegramBot'
 
 const MODEL = 'claude-haiku-4-5-20251001'
 const MAX_TOKENS = 1024
@@ -16,15 +16,18 @@ const API_TIMEOUT_MS = 25_000
 
 /**
  * Handle a message that the regex parser couldn't understand.
- * Returns the AI response text, or null if the AI is unavailable
- * (missing API key, API error) — caller should fall back to help text.
+ * Sends messages directly to Telegram (thinking indicator + final response).
+ * Throws if the AI is unavailable — caller should catch and fall back to help text.
  */
 export async function handleAIMessage(
   chatId: number,
   userMessage: string,
-): Promise<string | null> {
+): Promise<void> {
   const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return null
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set')
+
+  // Send immediate acknowledgment so the user knows we're working
+  await sendReply(chatId, '🔍')
 
   const systemPrompt = buildSystemPrompt()
   const history = getConversation(chatId)
@@ -39,8 +42,10 @@ export async function handleAIMessage(
     const response = await callClaude(apiKey, systemPrompt, messages)
 
     if (!response) {
-      // API error — fall back
-      return null
+      // API error — send fallback message
+      appendToConversation(chatId, newMessages)
+      await sendReply(chatId, "Something went wrong on my end. Try again in a sec?")
+      return
     }
 
     const assistantMsg: AnthropicMessage = {
@@ -58,7 +63,8 @@ export async function handleAIMessage(
         .join('\n')
 
       appendToConversation(chatId, newMessages)
-      return text || '(No response generated)'
+      await sendReply(chatId, text || '(No response generated)')
+      return
     }
 
     if (response.stop_reason === 'tool_use') {
@@ -121,11 +127,12 @@ export async function handleAIMessage(
       .map((b) => b.text)
       .join('\n')
 
-    return text || '(No response generated)'
+    await sendReply(chatId, text || '(No response generated)')
+    return
   }
 
   appendToConversation(chatId, newMessages)
-  return "I got a bit lost with that request. Could you try rephrasing?"
+  await sendReply(chatId, "I got a bit lost with that request. Could you try rephrasing?")
 }
 
 // ── Anthropic API call ──────────────────────────────────────
