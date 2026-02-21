@@ -13,6 +13,7 @@ import {
   getAllTags,
   removeTagFromItem,
 } from './autoTagger'
+import { handleAIMessage } from './ai/claudeHandler'
 
 // ── Telegram types (minimal) ─────────────────────────────────
 interface TelegramUpdate {
@@ -59,10 +60,11 @@ type FoundItem = {
 }
 
 // ── Undo types ───────────────────────────────────────────────
-type UndoAction =
+export type UndoAction =
   | { type: 'restore'; item: { name: string; location_id: number; quantity: number; notes: string | null }; description: string }
   | { type: 'delete'; itemId: number; description: string }
   | { type: 'revert-quantity'; itemId: number; previousQuantity: number; description: string }
+  | { type: 'revert-location'; itemId: number; previousLocationId: number; description: string }
 
 // ── Pending tag prompt ───────────────────────────────────────
 type PendingTagPrompt = {
@@ -73,7 +75,7 @@ type PendingTagPrompt = {
 }
 
 // Module-level stores — persist across warm invocations on Vercel.
-const undoStore = new Map<number, UndoAction>()
+export const undoStore = new Map<number, UndoAction>()
 const lastSearchStore = new Map<number, { query: string; results: FoundItem[] }>()
 const pendingTagStore = new Map<number, PendingTagPrompt>()
 
@@ -565,6 +567,14 @@ async function handleUndo(chatId: number): Promise<string> {
       if (error) return `Undo failed: ${error.message}`
       return `Undone: ${action.description}`
     }
+    case 'revert-location': {
+      const { error } = await supabaseAdmin
+        .from('items')
+        .update({ location_id: action.previousLocationId })
+        .eq('id', action.itemId)
+      if (error) return `Undo failed: ${error.message}`
+      return `Undone: ${action.description}`
+    }
   }
 }
 
@@ -734,7 +744,7 @@ async function handleDeleteDictCmd(itemName: string): Promise<string> {
 }
 
 // ── Telegram reply helper ────────────────────────────────────
-async function sendReply(chatId: number, text: string): Promise<void> {
+export async function sendReply(chatId: number, text: string): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN!
   await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: 'POST',
@@ -901,13 +911,25 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
       ].join('\n')
       break
     case 'unknown': {
-      // Before showing help, check if this is a bare zone ID with a pending search
+      // Before AI fallback, check if this is a bare zone ID with a pending search
       const t = text.trim().toUpperCase()
       if (/^[A-Z]\d+$/.test(t) && lastSearchStore.has(chatId)) {
         reply = await handleSearchFilterZone(chatId, t)
         break
       }
 
+      // Escalate to Claude AI
+      try {
+        const aiReply = await handleAIMessage(chatId, text)
+        if (aiReply) {
+          reply = aiReply
+          break
+        }
+      } catch (err) {
+        console.error('AI handler error:', err)
+      }
+
+      // Fallback if AI unavailable or errored
       reply = [
         "I didn't understand that. Try:",
         '• "Bought 5 Bananas in N2"',

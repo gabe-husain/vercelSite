@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { handleTelegramUpdate } from '@/src/lib/telegramBot'
 
 export async function POST(request: NextRequest) {
@@ -10,9 +10,17 @@ export async function POST(request: NextRequest) {
 
   try {
     const update = await request.json()
-    await handleTelegramUpdate(update)
+    // Process in background so we return 200 immediately to Telegram.
+    // AI tool-use loops can take 5-15s; without after(), Telegram may timeout and retry.
+    after(async () => {
+      try {
+        await handleTelegramUpdate(update)
+      } catch (err) {
+        console.error('Telegram handler error:', err)
+      }
+    })
   } catch (err) {
-    console.error('Telegram webhook error:', err)
+    console.error('Telegram webhook parse error:', err)
   }
 
   // Always return 200 — Telegram retries on non-200 responses
