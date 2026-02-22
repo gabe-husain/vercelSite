@@ -89,8 +89,14 @@ export async function handleAIMessage(
         await sendReply(chatId, intermediateText)
       }
 
-      // Show the working indicator again for this tool round (round 0 already got
-      // one at the top, but it's fine to show again — the user sees progress).
+      // On the very last allowed round, don't execute tools — we'd have no round
+      // left to send a closing message, so the user would be left on 🔍.
+      // Instead, break out and let the summary prompt below wrap things up.
+      if (round === MAX_ROUNDS - 1) {
+        break
+      }
+
+      // Show the working indicator before tools run.
       if (round > 0 || intermediateText) {
         await sendReply(chatId, '🔍')
       }
@@ -141,7 +147,7 @@ export async function handleAIMessage(
   messages.push(finalPrompt)
   newMessages.push(finalPrompt)
 
-  const finalResponse = await callClaude(apiKey, systemPrompt, messages)
+  const finalResponse = await callClaude(apiKey, systemPrompt, messages, false)
   if (finalResponse) {
     const finalAssistant: AnthropicMessage = {
       role: 'assistant',
@@ -165,6 +171,7 @@ async function callClaude(
   apiKey: string,
   system: string,
   messages: AnthropicMessage[],
+  includeTools = true,
 ): Promise<AnthropicResponse | null> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS)
@@ -181,7 +188,7 @@ async function callClaude(
         model: MODEL,
         max_tokens: MAX_TOKENS,
         system,
-        tools: TOOL_DEFINITIONS,
+        ...(includeTools ? { tools: TOOL_DEFINITIONS } : {}),
         messages,
       }),
       signal: controller.signal,
