@@ -11,7 +11,6 @@ import { undoStore, sendReply } from '../telegramBot'
 
 const MODEL = 'claude-haiku-4-5-20251001'
 const MAX_TOKENS = 2048
-const MAX_ROUNDS = 7
 const API_TIMEOUT_MS = 25_000
 
 /** Extract and join all text blocks from a content array. */
@@ -47,11 +46,10 @@ export async function handleAIMessage(
   // Track new messages added during this call (for saving to conversation store)
   const newMessages: AnthropicMessage[] = [newUserMsg]
 
-  for (let round = 0; round < MAX_ROUNDS; round++) {
+  while (true) {
     const response = await callClaude(apiKey, systemPrompt, messages)
 
     if (!response) {
-      // API error — send fallback message
       appendToConversation(chatId, newMessages)
       await sendReply(chatId, "Something went wrong on my end. Try again in a sec?")
       return
@@ -66,7 +64,6 @@ export async function handleAIMessage(
 
     if (response.stop_reason === 'max_tokens') {
       // Claude hit the token limit mid-response — don't send a truncated mess.
-      // Flush any partial text that came through, then apologise.
       const partial = extractText(response.content)
       appendToConversation(chatId, newMessages)
       if (partial) await sendReply(chatId, partial)
@@ -83,21 +80,12 @@ export async function handleAIMessage(
 
     if (response.stop_reason === 'tool_use') {
       // If Claude included text alongside the tool calls (e.g. "got it, on it!"),
-      // flush it to the user immediately before we start executing tools.
+      // flush it to the user first, then re-show the working indicator so the
+      // user knows we're continuing. If there's no text, stay silent — the
+      // original 🔍 from the top is still the last thing they saw.
       const intermediateText = extractText(response.content)
       if (intermediateText) {
         await sendReply(chatId, intermediateText)
-      }
-
-      // On the very last allowed round, don't execute tools — we'd have no round
-      // left to send a closing message, so the user would be left on 🔍.
-      // Instead, break out and let the summary prompt below wrap things up.
-      if (round === MAX_ROUNDS - 1) {
-        break
-      }
-
-      // Show the working indicator before tools run.
-      if (round > 0 || intermediateText) {
         await sendReply(chatId, '🔍')
       }
 
@@ -129,40 +117,15 @@ export async function handleAIMessage(
       messages.push(toolResultMsg)
       newMessages.push(toolResultMsg)
 
-      // Continue the loop — Claude will process tool results and (hopefully) end_turn
+      // Loop — Claude will process tool results and (hopefully) end_turn
       continue
     }
 
-    // Unexpected stop_reason
-    break
-  }
-
-  // Max rounds exceeded — inject a fresh user turn so Claude can still wrap up cleanly.
-  // This resets the effective token budget by nudging Claude to summarise.
-  const finalPrompt: AnthropicMessage = {
-    role: 'user',
-    content:
-      'You have reached the maximum number of tool calls. Please provide a final text response to the user based on what you have learned so far.',
-  }
-  messages.push(finalPrompt)
-  newMessages.push(finalPrompt)
-
-  const finalResponse = await callClaude(apiKey, systemPrompt, messages, false)
-  if (finalResponse) {
-    const finalAssistant: AnthropicMessage = {
-      role: 'assistant',
-      content: finalResponse.content,
-    }
-    newMessages.push(finalAssistant)
+    // Unexpected stop_reason — bail cleanly
     appendToConversation(chatId, newMessages)
-
-    const text = extractText(finalResponse.content)
-    await sendReply(chatId, text || '(No response generated)')
+    await sendReply(chatId, "hm, something unexpected happened. try again?")
     return
   }
-
-  appendToConversation(chatId, newMessages)
-  await sendReply(chatId, "I got a bit lost with that request. Could you try rephrasing?")
 }
 
 // ── Anthropic API call ──────────────────────────────────────
@@ -171,7 +134,6 @@ async function callClaude(
   apiKey: string,
   system: string,
   messages: AnthropicMessage[],
-  includeTools = true,
 ): Promise<AnthropicResponse | null> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS)
@@ -188,7 +150,7 @@ async function callClaude(
         model: MODEL,
         max_tokens: MAX_TOKENS,
         system,
-        ...(includeTools ? { tools: TOOL_DEFINITIONS } : {}),
+        tools: TOOL_DEFINITIONS,
         messages,
       }),
       signal: controller.signal,
