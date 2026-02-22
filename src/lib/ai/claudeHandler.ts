@@ -64,7 +64,17 @@ export async function handleAIMessage(
     messages.push(assistantMsg)
     newMessages.push(assistantMsg)
 
-    if (response.stop_reason === 'end_turn' || response.stop_reason === 'max_tokens') {
+    if (response.stop_reason === 'max_tokens') {
+      // Claude hit the token limit mid-response — don't send a truncated mess.
+      // Flush any partial text that came through, then apologise.
+      const partial = extractText(response.content)
+      appendToConversation(chatId, newMessages)
+      if (partial) await sendReply(chatId, partial)
+      await sendReply(chatId, "✂️ ran out of tokens mid-thought lol. try asking something a lil more specific?")
+      return
+    }
+
+    if (response.stop_reason === 'end_turn') {
       const text = extractText(response.content)
       appendToConversation(chatId, newMessages)
       await sendReply(chatId, text || '(No response generated)')
