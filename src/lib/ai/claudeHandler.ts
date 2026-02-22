@@ -14,6 +14,15 @@ const MAX_TOKENS = 2048
 const MAX_ROUNDS = 7
 const API_TIMEOUT_MS = 25_000
 
+/** Extract and join all text blocks from a content array. */
+function extractText(content: AnthropicResponse['content']): string {
+  return content
+    .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
+    .map((b) => b.text)
+    .join('\n')
+    .trim()
+}
+
 /**
  * Handle a message that the regex parser couldn't understand.
  * Sends messages directly to Telegram (thinking indicator + final response).
@@ -56,31 +65,26 @@ export async function handleAIMessage(
     newMessages.push(assistantMsg)
 
     if (response.stop_reason === 'end_turn' || response.stop_reason === 'max_tokens') {
-      // Extract text from response
-      const text = response.content
-        .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
-        .map((b) => b.text)
-        .join('\n')
-
+      const text = extractText(response.content)
       appendToConversation(chatId, newMessages)
       await sendReply(chatId, text || '(No response generated)')
       return
     }
 
     if (response.stop_reason === 'tool_use') {
-      // Flush any acknowledgment text Claude included before the tool calls
-      const interimText = response.content
-        .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
-        .map((b) => b.text)
-        .join('\n')
-        .trim()
-
-      if (interimText) {
-        await sendReply(chatId, interimText)
+      // If Claude included text alongside the tool calls (e.g. "got it, on it!"),
+      // flush it to the user immediately before we start executing tools.
+      const intermediateText = extractText(response.content)
+      if (intermediateText) {
+        await sendReply(chatId, intermediateText)
       }
 
-      // Show working indicator while tools run
-      await sendReply(chatId, '🔍')
+      // Show the working indicator again for this tool round (round 0 already got
+      // one at the top, but it's fine to show again — the user sees progress).
+      if (round > 0 || intermediateText) {
+        await sendReply(chatId, '🔍')
+      }
+
       const toolUseBlocks = response.content.filter(
         (b): b is ToolUseBlock => b.type === 'tool_use',
       )
@@ -109,7 +113,7 @@ export async function handleAIMessage(
       messages.push(toolResultMsg)
       newMessages.push(toolResultMsg)
 
-      // Continue the loop — Claude will process tool results
+      // Continue the loop — Claude will process tool results and (hopefully) end_turn
       continue
     }
 
@@ -117,7 +121,8 @@ export async function handleAIMessage(
     break
   }
 
-  // Max rounds exceeded — ask Claude for a final text answer
+  // Max rounds exceeded — inject a fresh user turn so Claude can still wrap up cleanly.
+  // This resets the effective token budget by nudging Claude to summarise.
   const finalPrompt: AnthropicMessage = {
     role: 'user',
     content:
@@ -135,11 +140,7 @@ export async function handleAIMessage(
     newMessages.push(finalAssistant)
     appendToConversation(chatId, newMessages)
 
-    const text = finalResponse.content
-      .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
-      .map((b) => b.text)
-      .join('\n')
-
+    const text = extractText(finalResponse.content)
     await sendReply(chatId, text || '(No response generated)')
     return
   }
