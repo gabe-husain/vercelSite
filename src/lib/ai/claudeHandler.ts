@@ -68,6 +68,19 @@ export async function handleAIMessage(
     }
 
     if (response.stop_reason === 'tool_use') {
+      // Flush any acknowledgment text Claude included before the tool calls
+      const interimText = response.content
+        .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
+        .map((b) => b.text)
+        .join('\n')
+        .trim()
+
+      if (interimText) {
+        await sendReply(chatId, interimText)
+      }
+
+      // Show working indicator while tools run
+      await sendReply(chatId, '🔍')
       const toolUseBlocks = response.content.filter(
         (b): b is ToolUseBlock => b.type === 'tool_use',
       )
