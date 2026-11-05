@@ -1,4 +1,7 @@
+import { Suspense } from "react";
 import TextPage from "../components/layout/Textpage";
+import Bikan from "../components/Bikan";
+import FarmersCorner from "../components/FarmersCorner";
 
 import { Metadata } from "next";
 
@@ -15,7 +18,13 @@ export default function Home() {
         <p className="textBody">
           There's not much here. Not even a couple pages.
         </p>
+
+        <Bikan />
       </div>
+
+      <Suspense>
+        <FarmersCorner />
+      </Suspense>
     </TextPage>
   );
 }

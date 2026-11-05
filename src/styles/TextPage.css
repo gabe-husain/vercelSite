@@ -4,6 +4,7 @@
   padding-left: var(--padding-leftright);
   padding-right: var(--padding-leftright);
   display: flex;
+  flex-direction: column;
 }
 
 .title {

@@ -1,11 +1,13 @@
 export const deprecatedCardData = [
     {
+        id: "colab-shuffle",
         title: "Colab Shuffle",
         subtitle: "FLASK - Deprecated, Spotify no longer supports audio features",
         content: "An app that allows users to create collaborative playlists that clusters the songs and rearranges them based off their audio features.",
         link: "https://estgab413.pythonanywhere.com/"
     },
     {
+        id: "spotify-now-playing",
         title: "Spotify Now Playing Viewer and Playlist Generator",
         subtitle: "FLASK - Deprecated, but was a cool project while it lasted",
         content: "Used marquee animation and album color analysis to create dynamic backgrounds. Featured both a marquee-only view and album cover display options.",
@@ -15,30 +17,35 @@ export const deprecatedCardData = [
 
 export const currentCardData = [
     {
+        id: "vowel-lab",
         title: "Vowel Lab",
         subtitle: "HTML/JS - Coded by Claude, ideas and features by Gabriel",
         content: "Hear and see what makes one vowel different from another: drag a vowel around the chart, watch formants in a live spectrum, build continua, play MMN-style oddball sequences, and turn Praat formant tables into clean medians.<br>Includes a bonus set of Gabriel's own vowels.<br>Source: github.com/gabe-husain/vowel-lab",
         link: "/vowel-lab/index.html"
     },
     {
+        id: "obsidian-blog-starter",
         title: "Obsidian Blog Starter",
         subtitle: "NEXT.JS - Built with Trae AI Assistant",
         content: "Turn your Obsidian vault into a beautiful Next.js website with ease.<br>A foundation for developers to build upon, featuring full Markdown/MDX support, wiki-style linking, and responsive design.<br>Created using Trae and Claude.",
         link: "https://github.com/gabe-husain/obsidian-blog-starter"
     },
     {
+        id: "mobhit",
         title: "MoBHit",
         subtitle: "FLASK - Created for the Banfield Lab",
         content: "MoBHit - Molybdenum-Based HMM Scanner 🧬 <br>Upload FASTA files or paste sequences directly<br>Scan against curated HMM profiles of MoCo enzyme families",
         link: "https://gabh.pythonanywhere.com/"
     },
     {
+        id: "gabbsite",
         title: "Gabbsite",
         subtitle: "NEXT.JS - My External Brain",
         content: "A Second brain implementation where I store my thoughts, notes, and knowledge. Built with Next.js and integrated with my Obsidian vault for seamless knowledge management. I have lots of bad words there though since it's my thoughts unfiltered. Please forgive.",
         link: "https://gab-site.vercel.app/"
     },
     {
+        id: "my-inventory",
         title: "My Inventory",
         subtitle: "NEXT.JS - the main reason for this site",
         content: "Gabriel's inventory of his stuff. It's a work in progress, but it's pretty cool, and you know exactly whats in his pantry",
@@ -48,18 +55,21 @@ export const currentCardData = [
 
 export const phishingCardData = [
     {
+        id: "lfny-fpa",
         title: "LFNY fpa login",
         subtitle: "HTML/CSS - A feigned login page for my high school wifi filter",
         content: "Why would I need to bypass or hide my traffic if the school wifi thinks I'm someone else browsing the internet? also there is a rickroll site that it used to redirect you to...",
         link: "https://gawesome13.github.io/lfny1/lfny,fpa.html"
     },
     {
+        id: "instagram-phish",
         title: "Instagram Login",
         subtitle: "HTML/JS/CSS - THIS IS A PHISHING SITE, it quite literally sends your login to me",
         content: "Also made around the same time... I think its funny to ask people to check out and friend me only to then tell them that they just gave me their login info. Internet safety is important always check the url",
         link: "https://gawesome13.github.io/insta/instagram.html"
     },
     {
+        id: "facebook-phish",
         title: "Facebook Login",
         subtitle: "HTML - broken basically",
         content: "This was always the hardest one to do. Facebook updates their outer HTML and css so I would have to recopy and reset it up each time... kinda ridiculous",
@@ -69,24 +79,28 @@ export const phishingCardData = [
 
 export const otherProjectsCardData = [
     {
+        id: "3d-modeling",
         title: "3D Modeling",
         subtitle: "THINGIVERSE - My 3d models I shared with the world",
         content: "From when I was around 14. Made mainly tools for myself and carrying cases. Chill design",
         link: "https://www.thingiverse.com/gawesome13/designs"
     },
     {
+        id: "recipe-converter",
         title: "Recipe Converter Yeast-Sourdough",
         subtitle: "REPLIT - A simple recipe converter for yeast based recipes to sourdough starter",
         content: "Complete - Probably my most used piece of code that I've written. A simple script that never gets old. Online calculator",
         link: "https://replit.com/@gawesome13/recipe-converter"
     },
     {
+        id: "hunter-revolution",
         title: "The Revolution is at Hunter College",
         subtitle: "DOCUMENTARY - A site for a club at Hunter College",
         content: 'Complete - An Interview with Kazembe Balagun of Rosa-Luxemburg-Stiftung',
         link:'https://drive.google.com/file/d/1IMNMfh_qPVBoy9-ctYmH6NiA2exkJNiU/view',
     },
     {
+        id: "custom-subtitles",
         title: "Custom Subtitles Extension",
         subtitle: "JS - Allows Subtitles on any page for any video using SRT",
         content: "Complete - I hate video player subtitles, here I'll allow you to upload one or multiple SRT files on any page, especially for your streamed/pir*ted movies! drag and drop chrome extension, under chrome web store review",

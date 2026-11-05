@@ -9,6 +9,7 @@ export default async function AllRecipes() {
   const recipes = await getPosts('recipes');
   
   const cardData: CardInformationProps[] = recipes.map((recipe) => ({
+    id: `recipe-${recipe.slug}`,
     title: recipe.title,
     subtitle: new Date(recipe.date).toLocaleDateString(),
     content: recipe.excerpt || 'A recipe by Gabriel Husain',

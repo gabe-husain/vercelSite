@@ -2,6 +2,9 @@ import { Suspense } from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Navbar from "../components/layout/Navbar";
+import TrailRecorder from "../components/TrailRecorder";
+import TrailFooter from "../components/TrailFooter";
+import PageTint from "../components/PageTint";
 import Link from "next/link";
 import { Metadata } from "next";
 import "@/src/app/globals.css";
@@ -68,6 +71,8 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen flex flex-col">
         <Navbar />
+        <TrailRecorder />
+        <PageTint />
         <main className="flex-grow">
           <Suspense fallback={<Loading />}>{children}</Suspense>
         </main>
@@ -91,6 +96,7 @@ export default function RootLayout({
               <span>@gab_h333</span>
             </Link>
           </div>
+          <TrailFooter />
         </footer>
 
       </body>

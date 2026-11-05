@@ -9,6 +9,7 @@ export default async function AllPosts() {
   const posts = await getPosts('posts');
   
   const cardData: CardInformationProps[] = posts.map((post) => ({
+    id: `post-${post.slug}`,
     title: post.title,
     subtitle: new Date(post.date).toLocaleDateString(),
     content: post.excerpt || 'A blog post by Gabriel Husain',
