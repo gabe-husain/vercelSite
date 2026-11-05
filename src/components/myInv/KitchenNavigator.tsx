@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react'
-import { KITCHEN_ZONES, ALL_LAYER_FILES, ZONE_GROUPS, type KitchenZone } from '@/src/lib/kitchenZones'
+import React, { useState, useMemo, useRef, useCallback, useEffect, memo } from 'react'
+import { KITCHEN_ZONES, ALL_LAYER_FILES, ZONE_GROUPS, DECORATIVE_IDS, type KitchenZone } from '@/src/lib/kitchenZones'
 import { useIsMobile } from '@/src/hooks/useIsMobile'
 import dynamic from 'next/dynamic'
 
@@ -56,6 +56,78 @@ function preloadImage(src: string): Promise<boolean> {
     img.src = src
   })
 }
+
+// ── Memoized layer component ─────────────────────────────────
+// Each layer only re-renders when its own open state changes,
+// instead of all 45+ layers re-rendering on every hover/click.
+const KitchenLayer = memo(function KitchenLayer({
+  file,
+  shouldOpen,
+  hasOpenImage,
+  isMobile,
+  imgBase,
+}: {
+  file: string
+  shouldOpen: boolean
+  hasOpenImage: boolean
+  isMobile: boolean
+  imgBase: string
+}) {
+  const isDecorative = DECORATIVE_IDS.has(file)
+
+  if (isDecorative) {
+    return (
+      <picture className="absolute inset-0 w-full h-full pointer-events-none select-none">
+        <source srcSet={`${imgBase}/${file}.webp`} type="image/webp" />
+        <img
+          src={`/images/kitchen/${file}.png`}
+          alt=""
+          className="w-full h-full object-contain dark:invert"
+          draggable={false}
+          loading={isMobile ? "lazy" : undefined}
+        />
+      </picture>
+    )
+  }
+
+  const showOpen = shouldOpen && hasOpenImage
+  return (
+    <>
+      <picture
+        className="absolute inset-0 w-full h-full pointer-events-none select-none"
+        style={{ opacity: showOpen ? 0 : 1, transition: 'opacity 200ms' }}
+      >
+        <source srcSet={`${imgBase}/${file}.webp`} type="image/webp" />
+        <img
+          src={`/images/kitchen/${file}.png`}
+          alt=""
+          className="w-full h-full object-contain dark:invert"
+          draggable={false}
+          loading={isMobile ? "lazy" : undefined}
+        />
+      </picture>
+      {hasOpenImage && (
+        <picture
+          className="absolute inset-0 w-full h-full pointer-events-none select-none"
+          style={{
+            opacity: showOpen ? 1 : 0,
+            visibility: showOpen ? 'visible' : 'hidden',
+            transition: 'opacity 200ms, visibility 200ms',
+          }}
+        >
+          <source srcSet={`${imgBase}/${file}_(open).webp`} type="image/webp" />
+          <img
+            src={`/images/kitchen/${file}_(open).png`}
+            alt=""
+            className="w-full h-full object-contain dark:invert"
+            draggable={false}
+            loading={isMobile ? "lazy" : undefined}
+          />
+        </picture>
+      )}
+    </>
+  )
+})
 
 // ── Component ─────────────────────────────────────────────────
 export default function KitchenNavigator({ items, locations, canEdit = false }: KitchenNavigatorProps) {
@@ -220,68 +292,17 @@ export default function KitchenNavigator({ items, locations, canEdit = false }: 
 
       {/* Kitchen Map with PNG overlays */}
       <div ref={mapContainerRef} className="relative w-full" style={{ aspectRatio: '2388 / 1668' }}>
-        {/* Image layers */}
-        {ALL_LAYER_FILES.map(file => {
-          if (isMobile) {
-            // ── MOBILE: closed image + open variant cross-fade on tap ──
-            const shouldOpen = openZoneIds.has(file) && openImageAvailable[file]
-
-            return (
-              <React.Fragment key={file}>
-                <picture className="absolute inset-0 w-full h-full pointer-events-none select-none" style={{ opacity: shouldOpen ? 0 : 1, transition: 'opacity 200ms' }}>
-                  <source srcSet={`${imgBase}/${file}.webp`} type="image/webp" />
-                  <img
-                    src={`/images/kitchen/${file}.png`}
-                    alt=""
-                    className="w-full h-full object-contain dark:invert"
-                    draggable={false}
-                    loading="lazy"
-                  />
-                </picture>
-                {openImageAvailable[file] && (
-                  <picture className="absolute inset-0 w-full h-full pointer-events-none select-none" style={{ opacity: shouldOpen ? 1 : 0, transition: 'opacity 200ms' }}>
-                    <source srcSet={`${imgBase}/${file}_(open).webp`} type="image/webp" />
-                    <img
-                      src={`/images/kitchen/${file}_(open).png`}
-                      alt=""
-                      className="w-full h-full object-contain dark:invert"
-                      draggable={false}
-                      loading="lazy"
-                    />
-                  </picture>
-                )}
-              </React.Fragment>
-            )
-          }
-
-          // ── DESKTOP: closed + open variant with cross-fade ──
-          const shouldOpen = openZoneIds.has(file) && openImageAvailable[file] && !tunerActive
-
-          return (
-            <React.Fragment key={file}>
-              <picture className="absolute inset-0 w-full h-full pointer-events-none select-none" style={{ opacity: shouldOpen ? 0 : 1, transition: 'opacity 200ms' }}>
-                <source srcSet={`/images/kitchen/${file}.webp`} type="image/webp" />
-                <img
-                  src={`/images/kitchen/${file}.png`}
-                  alt=""
-                  className="w-full h-full object-contain dark:invert"
-                  draggable={false}
-                />
-              </picture>
-              {openImageAvailable[file] && (
-                <picture className="absolute inset-0 w-full h-full pointer-events-none select-none" style={{ opacity: shouldOpen ? 1 : 0, transition: 'opacity 200ms' }}>
-                  <source srcSet={`/images/kitchen/${file}_(open).webp`} type="image/webp" />
-                  <img
-                    src={`/images/kitchen/${file}_(open).png`}
-                    alt=""
-                    className="w-full h-full object-contain dark:invert"
-                    draggable={false}
-                  />
-                </picture>
-              )}
-            </React.Fragment>
-          )
-        })}
+        {/* Image layers — memoized so only affected zones re-render */}
+        {ALL_LAYER_FILES.map(file => (
+          <KitchenLayer
+            key={file}
+            file={file}
+            shouldOpen={openZoneIds.has(file) && (!tunerActive || isMobile)}
+            hasOpenImage={!!openImageAvailable[file]}
+            isMobile={isMobile}
+            imgBase={imgBase}
+          />
+        ))}
 
         {/* ── Primary zone hotspots ── */}
         {!tunerActive && primaryClickableZones.map(zone => {
