@@ -91,11 +91,16 @@ const KitchenLayer = memo(function KitchenLayer({
   }
 
   const showOpen = shouldOpen && hasOpenImage
+  const willAnimate = hasOpenImage ? 'opacity' as const : undefined
   return (
     <>
       <picture
         className="absolute inset-0 w-full h-full pointer-events-none select-none"
-        style={{ opacity: showOpen ? 0 : 1, transition: 'opacity 200ms' }}
+        style={{
+          opacity: showOpen ? 0 : 1,
+          transition: 'opacity 200ms',
+          willChange: willAnimate,
+        }}
       >
         <source srcSet={`${imgBase}/${file}.webp`} type="image/webp" />
         <img
@@ -113,6 +118,7 @@ const KitchenLayer = memo(function KitchenLayer({
             opacity: showOpen ? 1 : 0,
             visibility: showOpen ? 'visible' : 'hidden',
             transition: 'opacity 200ms, visibility 200ms',
+            willChange: 'opacity',
           }}
         >
           <source srcSet={`${imgBase}/${file}_(open).webp`} type="image/webp" />
