@@ -15,6 +15,12 @@ export const deprecatedCardData = [
 
 export const currentCardData = [
     {
+        title: "Vowel Lab",
+        subtitle: "HTML/JS - Coded by Claude, ideas and features by Gabriel",
+        content: "Hear and see what makes one vowel different from another: drag a vowel around the chart, watch formants in a live spectrum, build continua, play MMN-style oddball sequences, and turn Praat formant tables into clean medians.<br>Includes a bonus set of Gabriel's own vowels.<br>Source: github.com/gabe-husain/vowel-lab",
+        link: "/vowel-lab/index.html"
+    },
+    {
         title: "Obsidian Blog Starter",
         subtitle: "NEXT.JS - Built with Trae AI Assistant",
         content: "Turn your Obsidian vault into a beautiful Next.js website with ease.<br>A foundation for developers to build upon, featuring full Markdown/MDX support, wiki-style linking, and responsive design.<br>Created using Trae and Claude.",

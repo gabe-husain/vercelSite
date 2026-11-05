@@ -29,7 +29,8 @@ In addition and this is just in reference to sourcing, try not to repeat what ot
 or approaching the reader as a [cognitive apprentice](https://en.wikipedia.org/wiki/Cognitive_apprenticeship)
 
 This most heavily leads to something I read about creating a natural [Zone of Proximal development](https://www.wested.org/resource/zone-of-proximal-development/) where whoever you are talking to can grasp onto the concepts by just approaching them with the concepts. There is some relation to [Intellectual Bootstrapping](https://en.wikipedia.org/wiki/Bootstrapping_(linguistics))
-but I find it differs in that even without repetition, if the person you are talking to has a grasp of some of the things you are saying, just speaking a little more about it will allow them to grasp more of what you're putting down. And it goes without saying, of course don't just start in the middle. I might be biased, but this is how most of my mentors have taught me, and when I learned the best.
+but I find it differs in that even without repetition, if the person you are talking to has a grasp of some of the things you are saying, just speaking a little more about it will allow them to grasp more of what you're putting down. And it goes without saying, of course don't just start in the middle. I might be biased, but this is how most of my mentors have taught me, and when I learned the best. And it's when you are most curious! maybe? [Metcalfe et al.](https://psycnet.apa.org/doiLanding?doi=10.1037%2Fxge0001284)
+
 
 ![[Pasted image 20250123160925.png]]
 

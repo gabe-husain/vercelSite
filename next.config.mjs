@@ -13,6 +13,16 @@ const nextConfig = {
     unoptimized: false,
   },
 
+  // Vowel Lab lives in its own repo (github.com/gabe-husain/vowel-lab) and is built by GitHub Pages.
+  // /vowel-lab/* is proxied there, so every push to that repo shows up here with nothing copied.
+  async redirects() {
+    return [{ source: "/vowel-lab", destination: "/vowel-lab/index.html", permanent: false }];
+  },
+
+  async rewrites() {
+    return [{ source: "/vowel-lab/:path*", destination: "https://gabe-husain.github.io/vowel-lab/:path*" }];
+  },
+
   async headers() {
     return [
       {
